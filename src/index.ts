@@ -1,15 +1,40 @@
-import fastify from 'fastify'
+import Fastify from "fastify";
+import * as dotenv from "dotenv";
 
-const server = fastify()
+dotenv.config();
 
-server.get('/ping', async (request, reply) => {
-  return 'pong\n'
-})
+const PORT = Number(process.env.PORT);
 
-server.listen({ port: 8080 }, (err, address) => {
-  if (err) {
-    console.error(err)
-    process.exit(1)
-  }
-  console.log(`Server listening at ${address}`)
-})
+const server = Fastify({
+	logger: {
+		level: "info",
+		transport: {
+			target: "pino-pretty",
+			options: {
+				colorize: true,
+				translateTime: "SYS:HH:MM:ss Z",
+				ignore: "pid,hostname",
+			},
+		},
+	},
+});
+
+server.get("/health", async (_, res) => {
+	if (server.server.address()) {
+		return res.status(200).send("status: ok");
+	} else {
+		return res.status(503).send("status: server not ok :'(");
+	}
+});
+
+const start = async () => {
+	try {
+		await server.listen({ port: PORT });
+		server.log.info(`Server listening on ${server.server.address()}`);
+	} catch (err) {
+		server.log.error(err);
+		process.exit(1);
+	}
+};
+
+start();
