@@ -1,9 +1,9 @@
 {
 	"type": "module",
 	"scripts": {
-		"dev": "tsx watch src/index.ts",
+		"dev": "tsx watch src/app.ts",
 		"build": "tsc -p tsconfig.json",
-		"start": "node dist/index.js",
+		"start": "node dist/app.js",
 		"test": "vitest",
 		"lint": "npx @biomejs/biome lint ./src",
 		"lint:fix": "npx @biomejs/biome lint --write ./src"

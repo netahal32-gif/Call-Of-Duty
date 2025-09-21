@@ -1,15 +1,16 @@
 import { test, expect, beforeAll, afterAll } from "vitest";
-import { buildServer } from "../routes/server.js";
+import buildServer from "../server.js";
 import type { FastifyInstance } from "fastify";
 
-let server : FastifyInstance;
+let server: FastifyInstance;
 
 beforeAll(async () => {
-  server = await buildServer(); 
+	process.env.NODE_ENV = "test"; 
+	server = await buildServer();
 });
 
 afterAll(async () => {
-  await server.close(); 
+	await server.close();
 });
 
 test("GET /health should return status OK", async () => {
