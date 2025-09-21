@@ -1,4 +1,5 @@
 import healthRoutes from "./routes/health.js";
+import soldiersRoutes from "./routes/soldiers.js";
 import fastifyMongo from "@fastify/mongodb";
 import * as dotenv from "dotenv";
 import Fastify from "fastify";
@@ -27,8 +28,9 @@ const buildServer = async () => {
 	await server.register(fastifyMongo, { url: MONGOURL, forceClose: true });
 
 	await server.register(healthRoutes, { prefix: "/health" });
+	await server.register(soldiersRoutes, { prefix: "/soldiers" });
 
 	return server;
 };
 
-export default buildServer;///update index
+export default buildServer; 
