@@ -2,10 +2,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "tsx watch --env-file=.env src/app.ts",
-		"test": "vitest --mode test",
-		"lint": "biome check --write ."
-		"test": "vitest",
-		"test:lint": "biome check --write --no-errors-on-unmatched ."
+		"test": "vitest --config ./vitest.config.ts",
+		"lint": "biome check --write --no-errors-on-unmatched ."
 	},
 	"dependencies": {
 		"@fastify/mongodb": "^9.0.2",
