@@ -7,7 +7,7 @@ const start = async () => {
 	try {
 		await server.listen({ port: PORT });
 	} catch (err) {
-		server.log.error(err);
+		server.log.error({"Error Listening to Server": err});
 		process.exit(1);
 	}
 };
