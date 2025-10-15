@@ -1,8 +1,8 @@
-import fastifyMongo from '@fastify/mongodb'
-import Fastify from 'fastify'
+import fastifyMongo from "@fastify/mongodb";
+import Fastify from "fastify";
 import { loggerConfig } from './loggerConfig.js'
 import healthRoutes from './routes/health.js'
-import soldierRoutes from "./routes/soldier.js";
+import soldierRoutes from './routes/soldier.js'
 
 const MONGO_URL = String(process.env.MONGO_URL)
 

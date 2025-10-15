@@ -1,27 +1,31 @@
-import type { FastifyInstance } from "fastify";
-import type { Soldier, SoldierOutput } from "./schemas/soldier.js";
-import { postSoldier } from "./helpers/soldierHelpers.js";
-
+import type { FastifyInstance } from 'fastify'
+import type { Soldier, SoldierOutput } from './schemas/soldier.js'
+import { responseSchema, soldierSchema } from './schemas/soldier.js'
+import { postSoldier } from './utils/soldierHelpers.js'
 
 const soldierRoutes = async (server: FastifyInstance) => {
-    server.post<{ Body: Soldier; res: SoldierOutput }>("/", async (req, res) => {
-        try {
-            const soldier = await postSoldier(server, req.body);
-            res.status(201).send({ "Soldier added successfully": soldier });
-        } catch (err: any) {
-            server.log.error(err);
-            if (err.statusCode === 400) {
-                return res.status(400).send({
-                    error: err.message,
-                    details: err.errors,
-                });
-            }
-            res.status(500).send({
-                "Error Adding Soldier":
-                    err.message || err,
-            });
-        }
-    });
-};
+  server.post<{ Body: Soldier; Replay: { 'Soldier added successfully': SoldierOutput } }>(
+    '/',
+    {
+      schema: {
+        body: soldierSchema,
+        response: { 201: responseSchema },
+      },
+    },
+    async (req, res) => {
+      const soldier = await postSoldier(server, req.body)
+      res.status(201).send({
+        data: soldier,
+        message: 'Soldier added successfully',
+      })
+    },
+  )
 
-export default soldierRoutes;
+  server.get<{ Body: Soldier['_id']; Replay: { 'Soldier added successfully': SoldierOutput } }>(
+    '/:id',
+    {},
+    async (req, res) => {},
+  )
+}
+
+export default soldierRoutes
