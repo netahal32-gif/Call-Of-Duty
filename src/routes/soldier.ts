@@ -24,7 +24,7 @@ const soldierRoutes = async (server: FastifyInstance) => {
         const soldier = parseResult.data;
         
         try {
-            const result = await collection.insertOne(soldier);
+            //const result = await collection.insertOne(soldier);
             res.status(201).send({ "Soldier added successfully": soldier });
         } catch (err) {
             server.log.error(err);
