@@ -1,10 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import type { Collection } from "mongodb";
+import type { Collection } from "mongodb";//
 import {
-	postSoldiersSchema,
+	postSoldiersSchema,//
 	type SoldierInput,
 	type rankNames,
 } from "../schema/soldierSchema.js";
+import { parseSoldierData } from "../helpers/soldiersHelpers.js";
 
 interface Soldier {
 	_id: string;
@@ -19,6 +20,8 @@ interface Soldier {
 const soldiersRoutes = async (server: FastifyInstance) => {
 	server.post<{ Body: SoldierInput }>("/", async (req, res) => {
 		try {
+            const soldier2 = parseSoldierData(req.body);//return to this and seperate into helper 
+
 			const parseResult = postSoldiersSchema.safeParse(req.body);
 
 			if (!parseResult.success) {
