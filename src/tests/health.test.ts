@@ -1,11 +1,11 @@
-import { test, expect, beforeAll, afterAll } from "vitest";
-import buildServer from "../server.js";
+import { afterAll, beforeAll, expect, test } from "vitest";
 import type { FastifyInstance } from "fastify";
+import buildServer from "../server.js";
 
 let server: FastifyInstance;
 
 beforeAll(async () => {
-	process.env.NODE_ENV = "test"; 
+	process.env.NODE_ENV = "test";
 	server = await buildServer();
 });
 

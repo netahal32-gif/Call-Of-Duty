@@ -1,9 +1,6 @@
-import healthRoutes from "./routes/health.js";
 import fastifyMongo from "@fastify/mongodb";
-import * as dotenv from "dotenv";
 import Fastify from "fastify";
-
-dotenv.config();
+import healthRoutes from "./routes/health.js";
 
 const MONGOURL = String(process.env.MONGOURL);
 
@@ -31,4 +28,4 @@ const buildServer = async () => {
 	return server;
 };
 
-export default buildServer;///update index
+export default buildServer;

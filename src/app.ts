@@ -1,7 +1,4 @@
-import * as dotenv from "dotenv";
 import buildServer from "./server.js";
-
-dotenv.config();
 
 const PORT = Number(process.env.PORT);
 
