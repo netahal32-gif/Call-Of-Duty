@@ -1,6 +1,6 @@
 const isTest = process.env.TEST
 
-export const loggetConfig = {
+export const loggerConfig = {
   level: isTest === 'true' ? 'silent' : 'info',
   transport: {
     options: {
