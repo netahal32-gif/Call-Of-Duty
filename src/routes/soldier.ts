@@ -9,22 +9,31 @@ interface SoldierOutput extends Soldier {
 
 const soldierRoutes = async (server: FastifyInstance) => {
     server.post<{ Body: Soldier; Replay: SoldierOutput }>("/", async (req, res) => {
-        const collection = server.mongo.db?.collection("soldiers");
-        if (!collection) throw new Error("MongoDB collection not found");
+
+        const db = server.mongo.db;
+        if (!db) throw new Error("MongoDB not connected");
+
+        const existing = await db.collection('soldiers').findOne({});
+
+        if (!existing) {
+            await db.createCollection("soldiers");
+            server.log.info('Created "soldiers" collection');
+        }
 
         const parseResult = soldierSchema.safeParse(req.body);
 
         if (!parseResult.success) {
             return res.status(400).send({
                 error: "Invalid request body",
-                details: parseResult.error.flatten(),
+                details: parseResult.error.flatten().fieldErrors,
             });
         }
 
+        const collection = db.collection<Soldier>("soldiers");
         const soldier = parseResult.data;
-        
+
         try {
-            //const result = await collection.insertOne(soldier);
+            await collection.insertOne(soldier);
             res.status(201).send({ "Soldier added successfully": soldier });
         } catch (err) {
             server.log.error(err);
