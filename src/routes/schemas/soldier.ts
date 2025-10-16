@@ -10,6 +10,11 @@ const ranks = [
     "colonel",
 ] as const;
 
+const timestampsSchema = z.object({
+    createdAt: z.date(),
+    updatedAt: z.date(),
+});
+
 export const soldierSchema = z.object({
     _id: z.string().regex(/^\d{7}$/, "Must be a 7-digit number string."),
     name: z.string().min(3).max(50),
@@ -44,5 +49,9 @@ export const soldierSchema = z.object({
         }),
     limitations: z.array(z.string()).transform((arr) => arr.map((limit) => limit.toLowerCase())).default([]),
 });
+
+export const soldierOutputSchema = soldierSchema.extend(timestampsSchema.shape);
+
+export type SoldierOutput = z.infer<typeof soldierOutputSchema>;
 
 export type Soldier = z.infer<typeof soldierSchema>;
