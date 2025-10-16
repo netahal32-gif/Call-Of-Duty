@@ -1,15 +1,15 @@
-import buildServer from "./server.js";
+import buildServer from './server.js'
 
-const PORT = Number(process.env.PORT);
+const PORT = Number(process.env.PORT)
 
 const start = async () => {
-	const server = await buildServer()
-	try {
-		await server.listen({ port: PORT });
-	} catch (err) {
-		server.log.error({"Error Listening to Server": err});
-		process.exit(1);
-	}
-};
+  const server = await buildServer()
+  try {
+    await server.listen({ port: PORT })
+  } catch (err) {
+    server.log.error({ 'Error Listening to Server': err })
+    process.exit(1)
+  }
+}
 
-start();
+start()

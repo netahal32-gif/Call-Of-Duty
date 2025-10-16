@@ -1,31 +1,19 @@
-import fastifyMongo from "@fastify/mongodb";
-import Fastify from "fastify";
-import healthRoutes from "./routes/health.js";
+import fastifyMongo from '@fastify/mongodb'
+import Fastify from 'fastify'
+import { loggetConfig } from './loggerConfig.js'
+import healthRoutes from './routes/health.js'
 
-const MONGOURL = String(process.env.MONGOURL);
+const MONGOURL = String(process.env.MONGOURL)
 
 const buildServer = async () => {
-	const server = Fastify({
-		logger:
-			process.env.NODE_ENV === "test"
-				? false
-				: {
-						level: "info",
-						transport: {
-							target: "pino-pretty",
-							options: {
-								colorize: true,
-								translateTime: "SYS:HH:MM:ss Z",
-								ignore: "pid,hostname",
-							},
-						},
-					},
-	});
-	await server.register(fastifyMongo, { url: MONGOURL, forceClose: true });
+  const server = Fastify({
+    logger: loggetConfig,
+  })
+  await server.register(fastifyMongo, { forceClose: true, url: MONGOURL })
 
-	await server.register(healthRoutes, { prefix: "/health" });
+  await server.register(healthRoutes, { prefix: '/health' })
 
-	return server;
-};
+  return server
+}
 
-export default buildServer;
+export default buildServer
