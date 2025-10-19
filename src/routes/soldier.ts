@@ -17,8 +17,8 @@ const soldierRoutes = async (server: FastifyInstance) => {
                 });
             }
             res.status(500).send({
-                error: "Error Adding Soldier",
-                details: err.message || err,
+                "Error Adding Soldier":
+                    err.message || err,
             });
         }
     });
