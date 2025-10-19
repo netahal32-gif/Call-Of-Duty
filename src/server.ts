@@ -1,15 +1,15 @@
 import fastifyMongo from '@fastify/mongodb'
 import Fastify from 'fastify'
-import { loggetConfig } from './loggerConfig.js'
+import { loggerConfig } from './loggerConfig.js'
 import healthRoutes from './routes/health.js'
 
-const MONGOURL = String(process.env.MONGOURL)
+const MONGO_URL = String(process.env.MONGO_URL)
 
 const buildServer = async () => {
   const server = Fastify({
-    logger: loggetConfig,
+    logger: loggerConfig,
   })
-  await server.register(fastifyMongo, { forceClose: true, url: MONGOURL })
+  await server.register(fastifyMongo, { forceClose: true, url: MONGO_URL })
 
   await server.register(healthRoutes, { prefix: '/health' })
 

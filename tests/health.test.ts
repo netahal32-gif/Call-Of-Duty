@@ -1,13 +1,11 @@
 import type { FastifyInstance } from 'fastify'
-import { loadEnv } from 'vite'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
-Object.assign(process.env, loadEnv('test', process.cwd(), ''))
-
 let server: FastifyInstance
+console.log("TEST ENV:", process.env.MONGO_URL);////delete check
 
 beforeAll(async () => {
-  const { default: buildServer } = await import('../server.js')
+  const { default: buildServer } = await import('../src/server.js')
   server = await buildServer()
 })
 
@@ -23,7 +21,7 @@ describe('Health', () => {
     })
 
     expect(response.statusCode).toBe(200)
-    expect(response.json()).toEqual({ Server_Status: 'ok' })
+    expect(response.json()).toEqual({ status: 'ok' })
   })
 
   test('GET /health/db should return status OK', async () => {
@@ -33,6 +31,6 @@ describe('Health', () => {
     })
 
     expect(response.statusCode).toBe(200)
-    expect(response.json()).toEqual({ DB_Status: 'ok' })
+    expect(response.json()).toEqual({ status: 'ok' })
   })
 })
