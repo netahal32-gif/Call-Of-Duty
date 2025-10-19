@@ -1,10 +1,10 @@
 import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
+import buildServer from '../src/server.js'
 
 let server: FastifyInstance
 
 beforeAll(async () => {
-  const { default: buildServer } = await import('../src/server.js')
   server = await buildServer()
 })
 
