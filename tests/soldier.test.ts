@@ -20,7 +20,7 @@ afterAll(async () => {
 describe('Soldier', () => {
   test('POST /soldiers should create and return the new soldier', async () => {
     const soldierPostRequest = {
-      _id: '1234567',
+      id: '1234567',
       limitations: ['STANDING', 'THE sUn'],
       name: 'John Doe',
       rank: {
@@ -40,7 +40,7 @@ describe('Soldier', () => {
     const soldier = responseBody.data
 
     expect(responseBody.message).toBe('Soldier added successfully')
-    expect(soldier._id).toBe(soldierPostRequest._id)
+    expect(soldier.id).toBe(soldierPostRequest.id)
     expect(soldier.name).toBe(soldierPostRequest.name)
     expect(soldier.rank.name).toBe(soldierPostRequest.rank.name)
     expect(soldier.rank.value).toBe(5)

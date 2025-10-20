@@ -1,15 +1,15 @@
 import type { FastifyInstance } from 'fastify'
 import type { Soldier, SoldierOutput } from './schemas/soldier.js'
-import { responseSchema, soldierSchema } from './schemas/soldier.js'
-import { postSoldier } from './utils/soldierHelpers.js'
+import { soldierResponseSchema, soldierIdParamSchema } from './schemas/soldier.js'
+import { postSoldier, getSoldier } from './utils/soldierHelpers.js'
 
 const soldierRoutes = async (server: FastifyInstance) => {
   server.post<{ Body: Soldier; Replay: { 'Soldier added successfully': SoldierOutput } }>(
     '/',
     {
       schema: {
-        body: soldierSchema,
-        response: { 201: responseSchema },
+        //body: soldierSchema,
+        response: { 201: soldierResponseSchema },
       },
     },
     async (req, res) => {
@@ -21,10 +21,30 @@ const soldierRoutes = async (server: FastifyInstance) => {
     },
   )
 
-  server.get<{ Body: Soldier['_id']; Replay: { 'Soldier added successfully': SoldierOutput } }>(
+  server.get<{ Params: { id: string }; Replay: SoldierOutput }>(
     '/:id',
-    {},
-    async (req, res) => {},
+    {
+      schema: {
+        //params: soldierIdParamSchema,
+        response: { 200: soldierResponseSchema },
+      },
+    },
+    async (req, res) => {
+      try {
+        console.log("ID",req.params.id)///////////delete
+        const soldier = await getSoldier(server, req.params.id)
+        res.status(200).send({
+          message: "Soldier retrieved successfully",
+          data: soldier,
+        })
+      } catch (err: any) {
+        if (err.statusCode === 404) {
+          return res.status(404).send({
+            error: 'Soldier not found',
+          })
+        }
+      }
+    }
   )
 }
 
