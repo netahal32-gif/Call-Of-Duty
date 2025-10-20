@@ -13,7 +13,9 @@ export default defineConfig(({ mode }) => {
       },
       env,
       include: ['**/tests/*.test.ts'],
-      exclude: [],
+      exclude: ['node_modules/**',
+        'dist/**',
+        '**/build/**'],
     },
   }
 })
