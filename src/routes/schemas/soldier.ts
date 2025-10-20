@@ -2,17 +2,16 @@ import { z } from 'zod'
 
 const ranks = ['private', 'corporal', 'sergeant', 'lieutenant', 'captain', 'major', 'colonel'] as const
 
+export const soldierIdParamSchema = z.object({
+  id: z.string().regex(/^\d{7}$/, "Must be a 7-digit number string."),
+});
+
 const timestampsSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
 })
 
-export const soldierSchema = z.object({
-  _id: z.string().regex(/^\d{7}$/, 'Must be a 7-digit number string.'),
-  limitations: z
-    .array(z.string())
-    .transform(arr => arr.map(limit => limit.toLowerCase()))
-    .default([]),
+export const baseSoldierSchema = z.object({
   name: z.string().min(3).max(50),
   rank: z
     .object({
@@ -31,15 +30,21 @@ export const soldierSchema = z.object({
       if (r.value && r.name === undefined) return { name: ranks[r.value], value: r.value }
       return r
     }),
+  limitations: z
+    .array(z.string())
+    .transform(arr => arr.map(limit => limit.toLowerCase()))
+    .default([]),
 })
+
+export const soldierSchema = soldierIdParamSchema.merge(baseSoldierSchema);
 
 export const soldierOutputSchema = soldierSchema.merge(timestampsSchema)
 
-export const responseSchema = z.object({
+export const soldierResponseSchema = z.object({
   data: soldierOutputSchema,
   message: z.string(),
 })
 
 export type SoldierOutput = z.infer<typeof soldierOutputSchema>
 
-export type Soldier = z.infer<typeof soldierSchema>
+export type Soldier = z.infer<typeof baseSoldierSchema>
