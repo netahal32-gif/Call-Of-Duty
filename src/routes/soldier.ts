@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import type { Soldier, SoldierOutput } from './schemas/soldier.js'
-import { soldierResponseSchema, soldierIdParamSchema } from './schemas/soldier.js'
+import { soldierResponseSchema,soldierSchema, soldierIdParamSchema } from './schemas/soldier.js'
 import { postSoldier, getSoldier } from './utils/soldierHelpers.js'
 
 const soldierRoutes = async (server: FastifyInstance) => {
@@ -8,7 +8,7 @@ const soldierRoutes = async (server: FastifyInstance) => {
     '/',
     {
       schema: {
-        //body: soldierSchema,
+        body: soldierSchema,
         response: { 201: soldierResponseSchema },
       },
     },
@@ -25,13 +25,12 @@ const soldierRoutes = async (server: FastifyInstance) => {
     '/:id',
     {
       schema: {
-        //params: soldierIdParamSchema,
+        params: soldierIdParamSchema,
         response: { 200: soldierResponseSchema },
       },
     },
     async (req, res) => {
       try {
-        console.log("ID",req.params.id)///////////delete
         const soldier = await getSoldier(server, req.params.id)
         res.status(200).send({
           message: "Soldier retrieved successfully",
