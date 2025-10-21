@@ -99,3 +99,11 @@ export const patchSoldier = async (server: FastifyInstance, Id: string, body: Up
 
   return await getSoldier(server, Id);
 }
+
+export const putSoldier = async (server: FastifyInstance, Id: string, body: UpdatedSoldier) => {//////NOT FINISHED
+  const db = dbCheck(server)
+  const soldier = await getSoldier(server, Id);//
+  if (!soldier) return null;//
+  if (!body || Object.keys(body).length === 0) return "Nothing to update";//
+  /////make function that checks if soldier exist and reuse in all PUT,PATCH...
+}
