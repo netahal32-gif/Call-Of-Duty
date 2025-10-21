@@ -9,16 +9,7 @@ export const setupZodCompiler = (server: FastifyInstance) => {
       if (result.success) {
         return { value: result.data }
       }
-
-      const formatted = result.error.flatten()
-
-      const error: any = new Error('Validation error')
-      error.statusCode = 400
-      error.error = 'Bad Request'
-      error.message = 'Invalid request body'
-      error.details = formatted.fieldErrors
-
-      return { error }
+      return zodError(result.error)
     }
   }
 
@@ -28,7 +19,7 @@ export const setupZodCompiler = (server: FastifyInstance) => {
       if (result.success) {
         return JSON.stringify(result.data)
       }
-      throw new Error('Response validation failed')
+      throw new Error('Response validation failed: ' + JSON.stringify(result.error.issues))
     }
   }
 

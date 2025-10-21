@@ -1,45 +1,70 @@
-import { z } from 'zod'
+import {
+  deleteSchema,
+  getByIdSchema,
+  getByParamsSchema,
+  patchSchema,
+  postSchema,
+  putLimitationsSchema,
+} from '../schemas/soldier-schemas.js'
+import type { AppServer } from '../server.js'
+import { createSoldierService } from '../services/soldier-service.js'
 
-const ranks = ['private', 'corporal', 'sergeant', 'lieutenant', 'captain', 'major', 'colonel'] as const
+const soldierRoutes = async (server: AppServer) => {
+  const soldierService = createSoldierService(server)
 
-const timestampsSchema = z.object({
-  createdAt: z.date(),
-  updatedAt: z.date(),
-})
+  server.get('/:_id', getByIdSchema, async (req, res) => {
+    const soldier = await soldierService.getSoldierById(req.params._id)
+    if (!soldier) {
+      return res.status(404).send({ message: `No soldier found with id ${req.params._id}` })
+    }
+    res.status(200).send({ data: soldier, message: 'Soldier retrieved successfully' })
+  })
 
-export const soldierSchema = z.object({
-  _id: z.string().regex(/^\d{7}$/, 'Must be a 7-digit number string.'),
-  limitations: z
-    .array(z.string())
-    .transform(arr => arr.map(limit => limit.toLowerCase()))
-    .default([]),
-  name: z.string().min(3).max(50),
-  rank: z
-    .object({
-      name: z.enum(ranks).optional(),
-      value: z
-        .number()
-        .refine(v => v >= 0 && v <= 6, 'Value must be between 0 and 6')
-        .optional(),
+  server.get('/', getByParamsSchema, async (req, res) => {
+    const soldiers = await soldierService.getSoldierByParams(req.query)
+    if (!soldiers.length) {
+      return res.status(404).send({
+        message: `No soldiers found with the params: ${JSON.stringify(req.query)}`,
+      })
+    }
+    res.status(200).send({ data: soldiers, message: 'Soldiers retrieved successfully' })
+  })
+
+  server.post('/', postSchema, async (req, res) => {
+    const soldier = await soldierService.insertSoldier(req.body)
+    res.status(201).send({ data: soldier, message: 'Soldier created successfully' })
+  })
+
+  server.patch('/:_id', patchSchema, async (req, res) => {
+    const soldier = await soldierService.updateSoldier(req.params._id, req.body)
+    if (!soldier) {
+      return res.status(404).send({ message: `No soldier found with id ${req.params._id}` })
+    }
+
+    res.status(200).send({ data: soldier, message: 'Soldier updated successfully' })
+  })
+
+  server.delete('/:_id', deleteSchema, async (req, res) => {
+    const result = await soldierService.deleteSoldier(req.params._id)
+    if (!result) {
+      return res.status(404).send({ message: `No soldier found with id ${req.params._id}` })
+    }
+    res.status(204).send()
+  })
+
+  server.put('/:_id/limitations', putLimitationsSchema, async (req, res) => {
+    const soldier = await soldierService.addLimitationsToSoldiers(req.params._id, req.body)
+
+    if (!soldier) {
+      return res.status(404).send({
+        message: `No soldier found with the id: ${req.params._id}`,
+      })
+    }
+    res.status(200).send({
+      data: soldier,
+      message: 'Soldier limitations added successfully',
     })
-    .refine(r => r.name || r.value, { message: 'Either rank.name or rank.value is required' })
-    .refine(r => r.value === undefined || r.name === undefined || ranks[r.value] === r.name, {
-      message: 'Rank name and rank value must match',
-    })
-    .transform(r => {
-      if (r.name && r.value === undefined) return { name: r.name, value: ranks.indexOf(r.name) }
-      if (r.value && r.name === undefined) return { name: ranks[r.value], value: r.value }
-      return r
-    }),
-})
+  })
+}
 
-export const soldierOutputSchema = soldierSchema.merge(timestampsSchema)
-
-export const responseSchema = z.object({
-  data: soldierOutputSchema,
-  message: z.string(),
-})
-
-export type SoldierOutput = z.infer<typeof soldierOutputSchema>
-
-export type Soldier = z.infer<typeof soldierSchema>
+export default soldierRoutes

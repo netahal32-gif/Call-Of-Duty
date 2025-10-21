@@ -1,11 +1,12 @@
 import type { FastifyInstance } from 'fastify'
 import buildServer from '../src/server.js'
+import type { Soldier } from '../src/types/soldier.js'
 import { makeSoldier } from './data.js'
 import { soldierPostBody } from './db-insert.js'
 
 describe('Soldier Routes', () => {
   let server: FastifyInstance
-  const date = '2000-01-01'
+  const pastDate = '2001-01-01'
 
   beforeAll(async () => {
     server = await buildServer()
@@ -35,11 +36,9 @@ describe('Soldier Routes', () => {
 
       expect(response.statusCode).toBe(201)
       expect(soldier).toMatchObject({
-        _id: payload._id,
+        ...payload,
         limitations: payload.limitations.map(l => l.toLowerCase()),
-        name: payload.name,
         rank: {
-          name: payload.rank.name,
           value: 5,
         },
       })
@@ -54,7 +53,7 @@ describe('Soldier Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/soldiers',
       })
 
@@ -73,7 +72,7 @@ describe('Soldier Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/soldiers',
       })
 
@@ -84,12 +83,12 @@ describe('Soldier Routes', () => {
 
     test('POST /soldiers should return 400  if there is neither rank.name or rank.value', async () => {
       const payload = soldierPostBody({
-        blankRank: true,
+        rank: {},
       })
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/soldiers',
       })
 
@@ -99,11 +98,11 @@ describe('Soldier Routes', () => {
     })
 
     test('POST /soldiers should return 400  if the body is empty', async () => {
-      const soldierPostBody = {}
+      const payload = {}
 
       const response = await server.inject({
         method: 'POST',
-        payload: soldierPostBody,
+        payload,
         url: '/soldiers',
       })
 
@@ -121,7 +120,7 @@ describe('Soldier Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/soldiers',
       })
 
@@ -137,7 +136,7 @@ describe('Soldier Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/soldiers',
       })
 
@@ -153,7 +152,7 @@ describe('Soldier Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/soldiers',
       })
 
@@ -178,14 +177,14 @@ describe('Soldier Routes', () => {
     })
 
     test('POST /soldiers should return 500  if there is already a soldier with that id', async () => {
-      const _id = await makeSoldier(server)
+      const _id = (await makeSoldier(server))._id
       const payload = soldierPostBody({
         _id: _id,
       })
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/soldiers',
       })
 
@@ -199,7 +198,7 @@ describe('Soldier Routes', () => {
 
   describe('GET /soldiers/:_id', () => {
     test('GET /soldiers/:_id should return 200  if a soldier with that id is exists in the db', async () => {
-      const id = await makeSoldier(server)
+      const id = (await makeSoldier(server))._id
       const response = await server.inject({
         method: 'GET',
         url: `/soldiers/${id}`,
@@ -234,12 +233,8 @@ describe('Soldier Routes', () => {
       const soldiers = responseBody.data
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(soldiers)).toBe(true)
       expect(soldiers.length).toBeGreaterThan(0)
-
-      for (const s of soldiers) {
-        expect(s.rank.value).toBe(5)
-      }
+      expect(soldiers.every((s: { rank: { value: number } }) => s.rank.value === 5)).toBeTruthy()
     })
 
     test('GET /soldiers?name=John%20Doe should return 200  if there are any soldiers in the db that are named John Doe', async () => {
@@ -253,11 +248,8 @@ describe('Soldier Routes', () => {
       const soldiers = responseBody.data
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(soldiers)).toBe(true)
       expect(soldiers.length).toBeGreaterThan(0)
-      for (const s of soldiers) {
-        expect(s.name).toBe('John Doe')
-      }
+      expect(soldiers.every((s: { name: string }) => s.name === 'John Doe')).toBeTruthy()
     })
 
     test('GET /soldiers?rankName=major should return 200  if there are any soldiers in the db that are at rank major', async () => {
@@ -270,11 +262,8 @@ describe('Soldier Routes', () => {
       const responseBody = response.json()
       const soldiers = responseBody.data
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(soldiers)).toBe(true)
       expect(soldiers.length).toBeGreaterThan(0)
-      for (const s of soldiers) {
-        expect(s.rank.name).toBe('major')
-      }
+      expect(soldiers.every((s: { rank: { name: string } }) => s.rank.name === 'major')).toBeTruthy()
     })
 
     test('GET /soldiers?limitations=sunlight&limitations=running should return 200  if there are any soldiers in the db that have sunlight and running as their limitations', async () => {
@@ -285,50 +274,51 @@ describe('Soldier Routes', () => {
       })
 
       const responseBody = response.json()
-      const soldiers = responseBody.data
+      const soldiers = responseBody.data as Soldier[]
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(soldiers)).toBe(true)
       expect(soldiers.length).toBeGreaterThan(0)
-      for (const s of soldiers) {
-        expect(s.limitations).toEqual(['sunlight', 'running'])
-      }
+      expect(soldiers.every(s => s.limitations.every(l => ['sunlight', 'running'].includes(l)))).toBeTruthy()
     })
 
-    test(`GET /soldiers?createdAt=${date} should return 200 if there are any soldiers in the db that were created after the date`, async () => {
+    test(`GET /soldiers?createdAt=${pastDate} should return 200 if there are any soldiers in the db that were created after the date`, async () => {
       await makeSoldier(server)
+      await makeSoldier(server, { _id: '1234567', createdAt: new Date('2000-10-10T00:00:00Z') })
       const response = await server.inject({
         method: 'GET',
-        url: `/soldiers?createdAt=${date}`,
+        url: `/soldiers?createdAt=${pastDate}`,
       })
 
       const responseBody = response.json()
       const soldiers = responseBody.data
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(soldiers)).toBe(true)
       expect(soldiers.length).toBeGreaterThan(0)
-      for (const s of soldiers) {
-        expect(new Date(s.createdAt).getTime()).toBeGreaterThan(new Date(`${date}`).getTime())
-      }
+      expect(
+        soldiers.every((s: { createdAt: Date }) => new Date(s.createdAt).getTime() > new Date(pastDate).getTime()),
+      ).toBeTruthy()
     })
 
-    test(`GET /soldiers?updatedAt=${date} should return 200 if there are any soldiers in the db that were updated after the date`, async () => {
+    test(`GET /soldiers?updatedAt=${pastDate} should return 200 if there are any soldiers in the db that were updated after the date`, async () => {
       await makeSoldier(server)
+      await makeSoldier(server, {
+        _id: '1234567',
+        createdAt: new Date('2000-10-10T00:00:00Z'),
+        updatedAt: new Date('2000-10-10T00:00:00Z'),
+      })
       const response = await server.inject({
         method: 'GET',
-        url: `/soldiers?updatedAt=${date}`,
+        url: `/soldiers?updatedAt=${pastDate}`,
       })
 
       const responseBody = response.json()
       const soldiers = responseBody.data
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(soldiers)).toBe(true)
       expect(soldiers.length).toBeGreaterThan(0)
-      for (const s of soldiers) {
-        expect(new Date(s.updatedAt).getTime()).toBeGreaterThan(new Date(`${date}`).getTime())
-      }
+      expect(
+        soldiers.every((s: { updatedAt: Date }) => new Date(s.updatedAt).getTime() > new Date(pastDate).getTime()),
+      ).toBeTruthy()
     })
 
     test('GET /soldiers?rankValue=8 should return 400 and if the rankValue is bigger then allowed in the schema', async () => {
@@ -356,7 +346,7 @@ describe('Soldier Routes', () => {
 
   describe('DELETE /soldiers/:_id', () => {
     test('DELETE /soldiers/:_id should delete the soldier and return 204 if the soldier was deleted successfully', async () => {
-      const id = await makeSoldier(server)
+      const id = (await makeSoldier(server))._id
       const response = await server.inject({
         method: 'DELETE',
         url: `/soldiers/${id}`,
@@ -383,13 +373,7 @@ describe('Soldier Routes', () => {
 
   describe('PATCH /soldiers/:_id', () => {
     test('PATCH /soldiers/:_id should return 200 if  a soldier with that id exists and the body request matches the schema', async () => {
-      const id = await makeSoldier(server)
-      const beforeResponse = await server.inject({
-        method: 'GET',
-        url: `/soldiers/${id}`,
-      })
-
-      const beforeSoldier = beforeResponse.json().data
+      const beforeSoldier = await makeSoldier(server)
 
       const soldierPatchBody = {
         name: 'Peggy Carter',
@@ -401,14 +385,13 @@ describe('Soldier Routes', () => {
       const response = await server.inject({
         method: 'PATCH',
         payload: soldierPatchBody,
-        url: `/soldiers/${id}`,
+        url: `/soldiers/${beforeSoldier._id}`,
       })
       const soldier = response.json().data
 
-      expect(beforeResponse.statusCode).toBe(200)
       expect(response.statusCode).toBe(200)
       expect(soldier).toMatchObject({
-        _id: id,
+        _id: beforeSoldier._id,
         name: soldierPatchBody.name,
         rank: {
           name: 'private',
@@ -420,7 +403,7 @@ describe('Soldier Routes', () => {
     })
 
     test('PATCH /soldiers/:_id should return 400  if the request`s body contains unrecognized keys', async () => {
-      const id = await makeSoldier(server)
+      const id = (await makeSoldier(server))._id
       const soldierPatchBody = {
         id: '1234567',
       }
@@ -468,13 +451,8 @@ describe('Soldier Routes', () => {
 
   describe('PUT /soldiers/:_id/limitations', () => {
     test('PUT /soldiers/:_id/limitations should return 200  if a soldier with that id exists and the request body fits the schema', async () => {
-      const id = await makeSoldier(server)
-      const beforeResponse = await server.inject({
-        method: 'GET',
-        url: `/soldiers/${id}`,
-      })
+      const beforeSoldier = await makeSoldier(server)
 
-      const beforeSoldier = beforeResponse.json().data
       const oldLimitations = beforeSoldier.limitations || []
       const oldUpdateDate = new Date(beforeSoldier.updatedAt)
 
@@ -483,20 +461,19 @@ describe('Soldier Routes', () => {
       const response = await server.inject({
         method: 'PUT',
         payload: soldierPutBody,
-        url: `/soldiers/${id}/limitations`,
+        url: `/soldiers/${beforeSoldier._id}/limitations`,
       })
       const responseBody = response.json()
       const soldier = responseBody.data
       const expectedLimitations = [...oldLimitations, ...soldierPutBody.map(l => l.toLowerCase())]
 
-      expect(beforeResponse.statusCode).toBe(200)
       expect(response.statusCode).toBe(200)
       expect(soldier.limitations).toEqual(expectedLimitations)
       expect(new Date(soldier.updatedAt).getTime()).toBeGreaterThan(oldUpdateDate.getTime())
     })
 
     test('PUT /soldiers/:_id/limitations should return 400  if the request body is empty', async () => {
-      const id = await makeSoldier(server)
+      const id = (await makeSoldier(server))._id
       const soldierPutBody: string[] = []
 
       const response = await server.inject({
