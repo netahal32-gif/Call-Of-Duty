@@ -6,6 +6,31 @@ let server: FastifyInstance
 beforeAll(async () => {
   const { default: buildServer } = await import('../src/server.js')
   server = await buildServer()
+  await server.mongo.db?.collection('soldiers').insertMany([
+    {
+      "id": "1000001",
+      "name": "John Doe",
+      "rank": { "name": "major", "value": 5 },
+      "limitations": ["sunlight", "running"],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      "id": "1000002",
+      "name": "Alice Carter",
+      "rank": { "name": "major", "value": 5 },
+      "limitations": ["cold", "long standing"],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      "id": "1000003",
+      "name": "Michael Tan",
+      "rank": { "name": "sergeant", "value": 2 },
+      "limitations": ["heavy lifting"],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }])
 })
 
 afterAll(async () => {
@@ -68,17 +93,17 @@ describe('Soldier', () => {
 
     const responseBody = JSON.parse(response.payload)
 
-    expect(responseBody.details.rank).toEqual([
-      "Value must be between 0 and 6",
-      "Rank name and rank value must match",
+    expect(responseBody.details).toEqual([
+      { path: "rank.value", message: "Value must be between 0 and 6" },
     ])
+
     expect(responseBody.message).toBe('Invalid request body')
   })
 
-  test('GET /soldiers/1234567 should return the soldier', async () => {
+  test('GET /soldiers/1000001 should return the soldier', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: '/soldiers/1234567',
+      url: '/soldiers/1000001',
     })
 
     expect(response.statusCode).toBe(200)
@@ -87,20 +112,20 @@ describe('Soldier', () => {
     const soldier = responseBody.data
 
     expect(responseBody.message).toBe('Soldier retrieved successfully')
-    expect(soldier.id).toBe("1234567")
+    expect(soldier.id).toBe("1000001")
   })
 
-  test('GET /soldiers/1234560 should return 404 soldier not found', async () => {
+  test('GET /soldiers/1000099 should return 404 soldier not found', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: '/soldiers/1234560',
+      url: '/soldiers/1000099',
     })
 
     expect(response.statusCode).toBe(404)
 
     const responseBody = JSON.parse(response.payload)
 
-    expect(responseBody.message).toBe(`No soldier found with the id: 1234560`)
+    expect(responseBody.message).toBe(`No soldier found with the id: 1000099`)
   })
 
   test('GET /soldiers?rank_value=5 should return all soldiers in that rank', async () => {
@@ -108,6 +133,10 @@ describe('Soldier', () => {
       method: 'GET',
       url: '/soldiers?rank_value=5',
     })
+
+    if (response.statusCode !== 200) {
+      console.error('Response error:', response.payload, 1111111111111111111111)
+    }
 
     expect(response.statusCode).toBe(200)
 
@@ -122,7 +151,7 @@ describe('Soldier', () => {
       expect(s.rank.value).toBe(5);
     }
   })
-  
+
   test('GET /soldiers?rank_value=8 should return "No soldiers found"', async () => {
     const response = await server.inject({
       method: 'GET',
@@ -132,8 +161,83 @@ describe('Soldier', () => {
     expect(response.statusCode).toBe(404)
 
     const responseBody = JSON.parse(response.payload)
-    const soldiers = responseBody.data
 
     expect(responseBody.message).toBe(`No soldiers found with the params: {"rank_value":8}`)
+  })
+
+  test('DELETE /soldiers/1000003 should delete the soldier', async () => {
+    const response = await server.inject({
+      method: 'DELETE',
+      url: '/soldiers/1000003',
+    })
+
+    expect(response.statusCode).toBe(204)
+    expect(response.payload).toBe("")
+  })
+
+  test('DELETE /soldiers/1000006 should return 404 "No soldier found"', async () => {
+    const response = await server.inject({
+      method: 'DELETE',
+      url: '/soldiers/1000006',
+    })
+
+    expect(response.statusCode).toBe(404)
+  })
+
+  test('PATCH /soldiers/1000002 should return an updated soldier', async () => {
+    const beforeResponse = await server.inject({
+      method: 'GET',
+      url: '/soldiers/1000002',
+    })
+    expect(beforeResponse.statusCode).toBe(200)
+
+    const beforeBody = JSON.parse(beforeResponse.payload)
+    const beforeSoldier = beforeBody.data
+    const oldUpdatedAt = new Date(beforeSoldier.updatedAt)
+
+    const soldierPatchRequest = {
+      name: 'Peggy Carter',
+      rank: {
+        value: 0
+      },
+    }
+
+
+    const response = await server.inject({
+      method: 'PATCH',
+      payload: soldierPatchRequest,
+      url: '/soldiers/1000002',
+    })
+    expect(response.statusCode).toBe(200)
+
+    const responseBody = JSON.parse(response.payload)
+    const soldier = responseBody.data
+
+    expect(responseBody.message).toBe('Soldier patched successfully')
+    expect(soldier.id).toBe("1000002")
+    expect(soldier.name).toBe(soldierPatchRequest.name)
+    expect(soldier.rank.name).toBe("private")
+    expect(soldier.rank.value).toBe(soldierPatchRequest.rank.value)
+    expect(new Date(soldier.createdAt).toISOString()).toBe(beforeSoldier.createdAt)
+    expect((new Date(soldier.updatedAt)).getTime()).toBeGreaterThan(oldUpdatedAt.getTime())
+  })
+
+  test('PATCH /soldiers/1000002 should fail patching the id', async () => {
+    const soldierPatchRequest = {
+      id: "1234567"
+    }
+
+    const response = await server.inject({
+      method: 'PATCH',
+      payload: soldierPatchRequest,
+      url: '/soldiers/1000002',
+    })
+    expect(response.statusCode).toBe(400)
+
+    const responseBody = JSON.parse(response.payload)
+    const responseBodyDetails = responseBody.details[0]
+
+    expect(responseBody.message).toBe('Invalid request body')
+    expect(responseBodyDetails.message).toBe("Unrecognized key: \"id\"")
   })
 })
