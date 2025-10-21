@@ -1,32 +1,15 @@
 import type { FastifyInstance, FastifySchemaCompiler, FastifySerializerCompiler } from 'fastify'
 import type { z } from 'zod'
 
-const zodError = (error: z.ZodError) => {
-  const formatted = error.flatten()
-  const err: any = new Error('Validation error')
-  err.statusCode = 400
-  err.error = 'Bad Request'
-  err.message = 'Invalid request body'
-  err.details = formatted.fieldErrors
-  return { error: err }
-}
-
-
 export const setupZodCompiler = (server: FastifyInstance) => {
-  const normalize = (obj: any) =>
-    obj && typeof obj === "object"
-      ? JSON.parse(JSON.stringify(obj))
-      : obj;
-
   const validatorCompiler: FastifySchemaCompiler<z.ZodTypeAny> = ({ schema }) => {
     return data => {
-      const normalized = normalize(data);
-      const result = schema.safeParse(normalized)
+      const result = schema.safeParse(data)
 
       if (result.success) {
         return { value: result.data }
       }
-      return zodError(result.error)
+      return { error: result.error }
     }
   }
 
@@ -36,7 +19,7 @@ export const setupZodCompiler = (server: FastifyInstance) => {
       if (result.success) {
         return JSON.stringify(result.data)
       }
-      throw new Error('Response validation failed')
+      throw new Error('Response validation failed: ' + JSON.stringify(result.error.issues))
     }
   }
 
