@@ -9,11 +9,11 @@ import type {
 import Fastify from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
-import dutyRoutes from './routes/duty.js'
 import healthRoutes from './routes/health.js'
-import soldierRoutes from "./routes/soldier.js";
-
-const MONGO_URL = String(process.env.MONGO_URL)
+import soldierRoutes from './routes/soldier.js'
+import dutyRoutes from './routes/duty.js'
+import { loggerConfig } from './utils/logger/logger-config.js'
+import { loggerErrorHandler } from './utils/logger/logger-error-handler.js'
 
 const buildServer = async () => {
   const base = Fastify({
