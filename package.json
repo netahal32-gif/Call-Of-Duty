@@ -2,12 +2,15 @@
 	"type": "module",
 	"scripts": {
 		"dev": "tsx watch --env-file=.env src/app.ts",
-		"test": "vitest --config ./vitest.config.ts",
+		"test": "vitest --mode test",
+		"coverage": "vitest --mode test run --coverage",
 		"lint": "biome check --write --no-errors-on-unmatched ."
 	},
 	"dependencies": {
 		"@fastify/mongodb": "^9.0.2",
 		"fastify": "^5.6.0",
+		"fastify-type-provider-zod": "^6.1.0",
+		"mongodb": "^6.20.0",
 		"pino-pretty": "^13.1.2",
 		"vite": "^7.1.10",
 		"zod": "^4.1.8"
@@ -15,8 +18,9 @@
 	"devDependencies": {
 		"@biomejs/biome": "2.2.4",
 		"@types/node": "^24.5.2",
+		"@vitest/coverage-v8": "^4.0.8",
 		"tsx": "^4.20.5",
 		"vite": "^7.1.10",
-		"vitest": "^3.2.4"
+		"vitest": "^4.0.8"
 	}
 }

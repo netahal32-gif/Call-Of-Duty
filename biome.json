@@ -38,7 +38,8 @@
       "style": {
         "noImplicitBoolean": "off",
         "noNamespace": "off",
-        "useFilenamingConvention": "off"
+        "useFilenamingConvention": "off",
+        "noNonNullAssertion": "off"
       },
       "suspicious": {
         "noConsole": {

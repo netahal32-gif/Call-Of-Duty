@@ -1,19 +1,18 @@
 import type { FastifyInstance } from 'fastify'
-import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import buildServer from '../src/server.js'
 
-let server: FastifyInstance
-
-beforeAll(async () => {
-  server = await buildServer()
-})
-
-afterAll(async () => {
-  await server.close()
-})
-
 describe('Health', () => {
-  test('GET /health should return status OK', async () => {
+  let server: FastifyInstance
+
+  beforeAll(async () => {
+    server = await buildServer()
+  })
+
+  afterAll(async () => {
+    await server.close()
+  })
+
+  test('GET /health should return 200 "status ok" if the server is working', async () => {
     const response = await server.inject({
       method: 'GET',
       url: '/health',
@@ -23,7 +22,7 @@ describe('Health', () => {
     expect(response.json()).toEqual({ status: 'ok' })
   })
 
-  test('GET /health/db should return status OK', async () => {
+  test('GET /health/db should return 200 "status ok" if the db is working', async () => {
     const response = await server.inject({
       method: 'GET',
       url: '/health/db',
@@ -31,5 +30,16 @@ describe('Health', () => {
 
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual({ status: 'ok' })
+  })
+
+  test('GET /health/db should return 503 "No mongoDB connection" if there is no connection', async () => {
+    await server.mongo.client.close()
+    const response = await server.inject({
+      method: 'GET',
+      url: '/health/db',
+    })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({ status: 'No mongoDB connection' })
   })
 })

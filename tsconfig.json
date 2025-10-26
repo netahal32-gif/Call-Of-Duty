@@ -16,6 +16,7 @@
 
     "strict": true,
     "target": "es2022",
+    "types": ["vitest/globals"],
 
     "verbatimModuleSyntax": true
   }
