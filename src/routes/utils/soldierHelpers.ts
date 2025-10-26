@@ -6,15 +6,18 @@ export const postSoldier = async (server: FastifyInstance, body: Soldier): Promi
   const db = server.mongo.db
   if (!db) throw new Error('MongoDB not connected')
 
-  const existing = await db.collection('soldiers').findOne({})
-  if (!existing) {
-    await db.createCollection('soldiers')
-    server.log.info('Created "soldiers" collection')
+  const collections = await db.listCollections({ name: 'soldiers' }).toArray();
+  if (collections.length === 0) {
+    await db.createCollection('soldiers');
+    server.log.info('Created "soldiers" collection');
   }
+
+  const existingSoldier = await getSoldier(server, body.id);
+  if (existingSoldier) return null;
 
   const parseResult = soldierSchema.safeParse(body)
   if (!parseResult.success) {
-    throw Error
+    throw new Error('Invalid soldier data');
   }
 
   const currentDate = new Date()
@@ -29,13 +32,6 @@ export const postSoldier = async (server: FastifyInstance, body: Soldier): Promi
   return soldier
 }
 
-export const getSoldier = async (server: FastifyInstance, Id: string) => {
-  const db = dbCheck(server)
-
-  const soldier = await db.collection<SoldierOutput>('soldiers').findOne({ id: Id })
-
-  return soldier
-}
 
 export const getSoldierByParams = async (server: FastifyInstance, query: SoldierQuery) => {
   const db = dbCheck(server)
@@ -45,7 +41,7 @@ export const getSoldierByParams = async (server: FastifyInstance, query: Soldier
   if (query.name) mongoQuery.name = new RegExp(query.name, 'i')
   if (query.rank_name) mongoQuery['rank.name'] = query.rank_name
   if (query.rank_value !== undefined) mongoQuery['rank.value'] = query.rank_value
-  if (query.limitations) mongoQuery.limitations = { $in: query.limitations }
+  if (query.limitations) mongoQuery.limitations = { $all: query.limitations };
 
   if (query.createdAt) mongoQuery.createdAt = { $gte: query.createdAt }
   if (query.updatedAt) mongoQuery.updatedAt = { $gte: query.updatedAt }
@@ -61,9 +57,7 @@ export const getSoldierByParams = async (server: FastifyInstance, query: Soldier
 export const deleteSoldier = async (server: FastifyInstance, Id: string) => {
   const db = dbCheck(server)
   const soldier = await getSoldier(server, Id);
-  if (!soldier) {
-    return null;
-  }
+  if (!soldier) return null;
 
   const result = await db.collection<SoldierOutput>('soldiers').deleteOne({ id: Id });
 
@@ -100,10 +94,21 @@ export const patchSoldier = async (server: FastifyInstance, Id: string, body: Up
   return await getSoldier(server, Id);
 }
 
-export const putSoldier = async (server: FastifyInstance, Id: string, body: UpdatedSoldier) => {//////NOT FINISHED
+export const putSoldier = async (server: FastifyInstance, Id: string, body: string[]) => {
   const db = dbCheck(server)
-  const soldier = await getSoldier(server, Id);//
-  if (!soldier) return null;//
-  if (!body || Object.keys(body).length === 0) return "Nothing to update";//
-  /////make function that checks if soldier exist and reuse in all PUT,PATCH...
+  const soldier = await getSoldier(server, Id);
+  if (!soldier) return null;
+  if (!body || body.length === 0) return 'Nothing to update';
+
+  const result = await db.collection<SoldierOutput>('soldiers').updateOne(
+    { id: Id },
+    {
+      $addToSet: { limitations: { $each: body.map(l => l.toLowerCase()) } },
+      $set: { updatedAt: new Date() }
+    }
+  );
+
+  if (result.matchedCount === 0) return null;
+  if (result.modifiedCount === 0) return soldier;
+  return await getSoldier(server, Id);
 }
