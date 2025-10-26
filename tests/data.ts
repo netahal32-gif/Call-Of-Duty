@@ -1,5 +1,6 @@
+
 import type { BaseDuty, DutyDB } from '../src/types/duty.js'
-import type { Soldier, SoldierOutput, SoldierRank } from '../src/types/soldier.js'
+import type { Soldier, SoldierDb, SoldierRank } from '../src/types/soldier.js'
 import { ranks } from '../src/types/soldier.js'
 
 export const defaultSoldierInput: Soldier = {
@@ -9,7 +10,7 @@ export const defaultSoldierInput: Soldier = {
   rank: { name: 'major', value: 5 },
 }
 
-export const defaultSoldierOutput: SoldierOutput = {
+export const defaultSoldierOutput: SoldierDb = {
   ...defaultSoldierInput,
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -34,7 +35,7 @@ export const soldierPostBody = (input: Partial<Soldier> = {}) => {
   }
 }
 
-export const soldierDb = (input: Partial<SoldierOutput> = {}) => {
+export const soldierDbBody = (input: Partial<SoldierDb> = {}) => {
   return {
     ...defaultSoldierOutput,
     ...input,
@@ -64,14 +65,14 @@ export const defaultDutyOutput: DutyDB = {
   updatedAt: new Date(),
 }
 
-export const dutyPostBody = (input: Partial<BaseDuty> = {}) => {
+export const dutyPostBody = (input?: Partial<BaseDuty>) => {
   return {
     ...defaultDutyInput,
     ...input,
   }
 }
 
-export const dutyDb = (input: Partial<DutyDB> = {}) => {
+export const dutyDbBody = (input?: Partial<DutyDB>) => {
   return {
     ...defaultDutyOutput,
     ...input,
