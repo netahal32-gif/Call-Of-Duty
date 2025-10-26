@@ -30,7 +30,8 @@ const buildServer = async () => {
   server.setSerializerCompiler(serializerCompiler)
 
   await server.register(healthRoutes, { prefix: '/health' })
-  await server.register(soldierRoutes, { prefix: "/soldiers" });
+  await server.register(soldierRoutes, { prefix: '/soldiers' })
+  await server.register(dutyRoutes, { prefix: '/duties' })
 
   return server
 }
