@@ -68,7 +68,7 @@ const dutyRoutes = async (server: AppServer) => {
       })
     }
     if (duty === 'Duty scheduled') {
-      return res.status(409).send({ message: 'Cannot change scheduled duties' })
+      return res.status(409).send({ message: 'Cannot change scheduled duties' }) 
     }
 
     res.status(200).send({
