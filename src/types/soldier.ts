@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { timestampsSchema } from './general.js'
 
 export const ranks = ['private', 'corporal', 'sergeant', 'lieutenant', 'captain', 'major', 'colonel'] as const
 
@@ -28,11 +29,6 @@ export const rankSchema = z
   .refine(r => ranks[r.value!] === r.name, {
     message: 'Rank name and rank value must match',
   })
-
-export const timestampsSchema = z.object({
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-})
 
 export const baseSoldierSchema = z.object({
   limitations: soldierLimitationsSchema,
@@ -74,10 +70,6 @@ export const soldierResponseSchema = z.object({
 
 export const soldiersArrayResponseSchema = z.object({
   data: z.array(soldierOutputSchema),
-  message: z.string(),
-})
-
-export const errorResponseSchema = z.object({
   message: z.string(),
 })
 

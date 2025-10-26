@@ -1,5 +1,5 @@
+import { errorResponseSchema } from '../types/general.js'
 import {
-  errorResponseSchema,
   SoldierBodyToUpdateSchema,
   soldierAddLimitationsSchema,
   soldierIdParamSchema,
