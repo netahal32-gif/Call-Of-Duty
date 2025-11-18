@@ -34,65 +34,14 @@ export const createDutyService = (server: AppServer) => {
   }
 
   const getDutiesByParams = async (query: DutyQuery) => {
-    const mongoQuery: Filter<DutyDB> = { ...query }
+    const mongoQuery: Filter<DutyOutput> = {}
 
-    // const transformers = {
-    // name: (v: Duty["name"]) => new RegExp(v, "i"),
-    //   description: (v: Duty["description"]) => new RegExp(v, "i"),
-
-    //     startTime: (v: Duty["startTime"]) => ({ $gte: new Date(v) }),
-    //       createdAt: (v: Duty["createdAt"]) => ({ $gte: new Date(v) }),
-    //         updatedAt: (v: Duty["updatedAt"]) => ({ $gte: new Date(v) }),
-    //           endTime: (v: Duty["endTime"]) => ({ $lte: new Date(v) }),
-
-    //             constraints: (v: Duty["constraints"]) => ({ $all: v }),
-    //               soldiers: (v: Duty["soldiers"]) => ({ $all: v }),
-    // } as const
-
-    // for (const [key, value] of Object.entries(query)) {
-    //   if (!value) continue
-
-    //   mongoQuery[key] = key in transformers
-    //     ? transformers[key](value)
-    //     : value
-    // }
-
-    // const transformers = {
-    //   name: (v: Duty["name"]) => new RegExp(v, "i"),
-    //   description: (v: Duty["description"]) => new RegExp(v, "i"),
-
-    //   startTime: (v: Duty["startTime"]) => ({ $gte: new Date(v) }),
-    //   createdAt: (v: Duty["createdAt"]) => ({ $gte: new Date(v) }),
-    //   updatedAt: (v: Duty["updatedAt"]) => ({ $gte: new Date(v) }),
-    //   endTime: (v: Duty["endTime"]) => ({ $lte: new Date(v) }),
-
-    //   constraints: (v: Duty["constraints"]) => ({ $all: v }),
-    //   soldiers: (v: Duty["soldiers"]) => ({ $all: v }),
-    // };
-
-    // const mongoQuery: Filter<Duty> = Object.fromEntries(
-    //   Object.entries(query)
-    //     .filter(([, v]) => v != null)
-    //     .map(([k, v]) => [k, (transformers as Record<string, Function>)[k]?.(v) ?? v])
-    // );
-
-
-    // return collection.find(mongoQuery, { projection: { _id: 0 } }).toArray()
     if (query.name) mongoQuery.name = new RegExp(query.name, 'i')
     if (query.description) mongoQuery.description = new RegExp(query.description, 'i')
 
     if (query.startTime) mongoQuery.startTime = { $gte: new Date(query.startTime) }
     if (query.endTime) mongoQuery.endTime = { $lte: new Date(query.endTime) }
-
-    if (query.minRank) mongoQuery.minRank = query.minRank
-    if (query.maxRank) mongoQuery.maxRank = query.maxRank
-
-    if (query.constraints?.length) mongoQuery.constraints = { $all: query.constraints }
-
-    if (query.soldiers?.length) mongoQuery.soldiers = { $all: query.soldiers }
-
     if (query.createdAt) mongoQuery.createdAt = { $gte: new Date(query.createdAt) }
-
     if (query.updatedAt) mongoQuery.updatedAt = { $gte: new Date(query.updatedAt) }
 
     if (query.constraints?.length) mongoQuery.constraints = { $all: query.constraints }
