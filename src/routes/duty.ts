@@ -24,7 +24,6 @@ const dutyRoutes = async (server: AppServer) => {
 
   server.get('/', getByParamsSchema, async (req, res) => {
     const duties = await dutyService.getDutiesByParams(req.query)
-    console.log(duties,111111111)
     if (!duties.length) {
       return res.status(404).send({
         message: `No duties found with the params: ${JSON.stringify(req.query)}`,
@@ -69,7 +68,7 @@ const dutyRoutes = async (server: AppServer) => {
       })
     }
     if (duty === 'Duty scheduled') {
-      return res.status(409).send({ message: 'Cannot change scheduled duties' }) ////same
+      return res.status(409).send({ message: 'Cannot change scheduled duties' }) 
     }
 
     res.status(200).send({

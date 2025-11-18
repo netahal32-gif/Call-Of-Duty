@@ -8,7 +8,6 @@ import {
   soldierSchema,
   soldiersArrayResponseSchema,
 } from '../types/soldier.js'
-import { errorResponseSchema } from '../types/general.js'
 
 export const deleteSchema = {
   schema: {
