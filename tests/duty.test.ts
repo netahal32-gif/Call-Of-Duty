@@ -200,7 +200,8 @@ describe('Duty Routes', () => {
 
       const responseBody = response.json()
       expect(response.statusCode).toBe(400)
-      expect(responseBody.message).toBe('✖ body/constraints Invalid input: expected array, received undefined, body/description Invalid input: expected string, received undefined, body/endTime Invalid input: expected date, received Date, body/location Invalid input: expected array, received undefined, body/name Invalid input: expected string, received undefined, body/soldiersRequired Invalid input: expected number, received NaN, body/startTime Invalid input: expected date, received Date, body/value Invalid input: expected number, received NaN',
+      expect(responseBody.message).toBe(
+        '✖ body/constraints Invalid input: expected array, received undefined, body/description Invalid input: expected string, received undefined, body/endTime Invalid input: expected date, received Date, body/location Invalid input: expected array, received undefined, body/name Invalid input: expected string, received undefined, body/soldiersRequired Invalid input: expected number, received NaN, body/startTime Invalid input: expected date, received Date, body/value Invalid input: expected number, received NaN',
       )
     })
 
@@ -604,13 +605,13 @@ describe('Duty Routes', () => {
         url: `/duties/${id}`,
       })
 
-      const beforeDuty  = beforeResponse.json().data
+      const beforeDuty = beforeResponse.json().data
       const beforeHistory = beforeDuty.statusHistory
 
       const dutyPatchBody = {
         description: 'Routine check and repair of military equipment in the armory.',
         name: 'Equipment Maintenance',
-        status: "status"
+        status: 'status',
       }
 
       const response = await server.inject({
@@ -627,7 +628,7 @@ describe('Duty Routes', () => {
         description: dutyPatchBody.description,
         name: dutyPatchBody.name,
       })
-      expect(new Date(duty.createdAt).toISOString()).toBe(new Date(beforeDuty .createdAt).toISOString())
+      expect(new Date(duty.createdAt).toISOString()).toBe(new Date(beforeDuty.createdAt).toISOString())
       expect(new Date(duty.updatedAt).getTime()).toBeGreaterThan(new Date(beforeDuty.updatedAt).getTime())
       expect(afterHistory.length).toBe(beforeHistory.length + 1)
 

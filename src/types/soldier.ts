@@ -85,3 +85,5 @@ export type Soldier = z.infer<typeof soldierSchema>
 export type SoldierQuery = z.infer<typeof soldierQuerySchema>
 
 export type SoldierRank = z.infer<typeof rankSchema>
+
+export type SoldierId = z.infer<typeof soldierIdSchema>

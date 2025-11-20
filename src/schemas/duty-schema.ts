@@ -1,10 +1,9 @@
 import {
-  baseDutySchema,
-  dutySchema,
   constraintsSchema,
   dutiesArrayResponseSchema,
   dutyQuerySchema,
   dutyResponseSchema,
+  dutySchema,
   mongoIdSchema,
   updateDutySchema,
 } from '../types/duty.js'

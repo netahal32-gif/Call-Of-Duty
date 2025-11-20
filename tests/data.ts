@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { createDutyService } from '../src/services/duty-service.js'
 import { createSoldierService } from '../src/services/soldier-service.js'
-import type {  DutyOutput } from '../src/types/duty.js'
+import type { DutyOutput } from '../src/types/duty.js'
 import type { SoldierOutput, SoldierRank } from '../src/types/soldier.js'
 import { ranks } from '../src/types/soldier.js'
 import { defaultDutyInput } from './db-insert.js'
