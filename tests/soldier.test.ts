@@ -10,9 +10,6 @@ describe('Soldier Routes', () => {
   const pastDate = '2001-01-01'
 
   beforeAll(async () => {
-    const baseUrl = process.env.MONGO_URL!
-    const url = `${baseUrl}-soldier`
-    process.env.MONGO_URL = url
     server = await buildServer()
     soldierService = createSoldierService(server)
   })
@@ -197,7 +194,7 @@ describe('Soldier Routes', () => {
       const responseBody = response.json()
       expect(response.statusCode).toBe(500)
       expect(responseBody.message).toEqual(
-        `✖ E11000 duplicate key error collection: call-of-duty-test-soldier.soldiers index: _id_ dup key: { _id: "${_id}" }`,
+        `✖ E11000 duplicate key error collection: call-of-duty-test.soldiers index: _id_ dup key: { _id: "${_id}" }`,
       )
     })
   })
