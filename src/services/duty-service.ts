@@ -2,7 +2,7 @@ import type { Filter, UpdateFilter } from 'mongodb'
 import { ObjectId } from 'mongodb'
 import { dutyCollection } from '../models/duty-model.js'
 import type { AppServer } from '../server.js'
-import type { BaseDuty, DutyOutput, DutyQuery, UpdateDuty, Duty } from '../types/duty.js'
+import type { BaseDuty, Duty, DutyOutput, DutyQuery, UpdateDuty } from '../types/duty.js'
 
 export const createDutyService = (server: AppServer) => {
   const collection = dutyCollection(server)
@@ -16,11 +16,11 @@ export const createDutyService = (server: AppServer) => {
     const currentDate = new Date()
     const duty: DutyOutput = {
       ...body,
+      createdAt: currentDate,
       soldiers: body.soldiers ?? [],
       status: body.status ?? 'unscheduled',
       statusHistory: body.statusHistory ?? [{ date: currentDate, status: 'unscheduled' }],
       updatedAt: currentDate,
-      createdAt: currentDate,
     }
 
     const result = await collection.insertOne(duty)

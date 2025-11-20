@@ -59,8 +59,7 @@ export const extrasDutySchema = z.object({
     .default(() => [{ date: new Date(), status: 'unscheduled' }]),
 })
 
-export const dutySchema = baseDutySchema
-  .safeExtend(extrasDutySchema.shape)
+export const dutySchema = baseDutySchema.safeExtend(extrasDutySchema.shape)
 
 export const dutyOutputSchema = baseDutySchema
   .safeExtend(extrasDutySchema.shape)
