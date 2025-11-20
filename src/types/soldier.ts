@@ -3,9 +3,12 @@ import { timestampsSchema } from './general.js'
 
 export const ranks = ['private', 'corporal', 'sergeant', 'lieutenant', 'captain', 'major', 'colonel'] as const
 
+export const  soldierIdSchema = z.string().regex(/^\d{7}$/, 'Must be a 7-digit number string.')
+
 export const soldierIdParamSchema = z.object({
-  _id: z.string().regex(/^\d{7}$/, 'Must be a 7-digit number string.'),
+  _id: soldierIdSchema,
 })
+
 
 export const soldierLimitationsSchema = z.array(z.string().toLowerCase())
 

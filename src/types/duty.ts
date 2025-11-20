@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { timestampsSchema } from './general.js'
-import { ranks } from './soldier.js'
+import { ranks , soldierIdSchema} from './soldier.js'
 
 export const mongoIdSchema = z.object({ id: z.string().regex(/^[0-9a-fA-F]{24}$/) })
 
@@ -47,7 +47,7 @@ export const baseDutySchema = z
   .refine(minRankLessThanMax, minRankMessage)
 
 export const extrasDutySchema = z.object({
-  soldiers: z.array(z.string()).default([]),
+  soldiers: z.array(soldierIdSchema).default([]),
   status: z.string().default('unscheduled'),
   statusHistory: z
     .array(

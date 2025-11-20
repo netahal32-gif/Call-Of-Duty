@@ -87,8 +87,8 @@ describe('Duty Routes', () => {
 
     test('POST /duties should return 400 if end time is before the start time', async () => {
       const payload = dutyPostBody({
-        endTime: new Date('2025-11-20T09:00:00.000Z'),
-        startTime: new Date('2025-11-20T09:00:00.000Z'),
+        endTime: new Date('2026-11-20T09:00:00.000Z'),
+        startTime: new Date('2026-11-20T09:00:00.000Z'),
       })
 
       const response = await server.inject({
@@ -527,11 +527,11 @@ describe('Duty Routes', () => {
       }
     })
 
-    test('GET /duties?soldiers=soldier1&soldiers=soldier2 should return 200  if there are any duties in the db with those soldiers', async () => {
-      await makeDuty(server, { soldiers: ['soldier1', 'soldier2'] })
+    test('GET /duties?soldiers=1234567&soldiers=1234568 should return 200  if there are any duties in the db with those soldiers', async () => {
+      await makeDuty(server, { soldiers: ['1234567', '1234568'] })
       const response = await server.inject({
         method: 'GET',
-        url: '/duties?soldiers=soldier1&soldiers=soldier2',
+        url: '/duties?soldiers=1234567&soldiers=1234568',
       })
 
       const responseBody = response.json()
@@ -541,7 +541,7 @@ describe('Duty Routes', () => {
       expect(duties.length).toBeGreaterThan(0)
 
       for (const d of duties) {
-        expect(d.soldiers).toEqual(expect.arrayContaining(['soldier1', 'soldier2']))
+        expect(d.soldiers).toEqual(expect.arrayContaining(['1234567', '1234568']))
       }
     })
 
