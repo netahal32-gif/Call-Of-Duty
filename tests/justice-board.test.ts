@@ -3,11 +3,13 @@ import buildServer from '../src/server.js'
 import { createDutyService } from '../src/services/duty-service.js'
 import { createSoldierService } from '../src/services/soldier-service.js'
 import { dutyDb, soldierDb } from './data.js'
+import type { SoldierDb } from '../src/types/soldier.js'
 
 describe('Justice Routes', () => {
   let server: FastifyInstance
   let dutyService: ReturnType<typeof createDutyService>
   let soldierService: ReturnType<typeof createSoldierService>
+   let insertSoldier: (params?: Partial<SoldierDb>) => Promise<SoldierDb>
 
   beforeAll(async () => {
     const baseUrl = process.env.MONGO_URL!
@@ -88,7 +90,7 @@ describe('Justice Routes', () => {
       const responseBody = response.json()
 
       expect(response.statusCode).toBe(404)
-      expect(responseBody.message).toBe('No soldier found with id 0000000 ')
+      expect(responseBody.message).toBe('No soldier found with the id: 0000000')
     })
   })
 })
