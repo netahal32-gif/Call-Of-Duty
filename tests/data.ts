@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify'
 import { createDutyService } from '../src/services/duty-service.js'
 import { createSoldierService } from '../src/services/soldier-service.js'
-import type { BaseDuty, DutyOutput } from '../src/types/duty.js'
+import type {  DutyOutput } from '../src/types/duty.js'
 import type { SoldierOutput, SoldierRank } from '../src/types/soldier.js'
 import { ranks } from '../src/types/soldier.js'
+import { defaultDutyInput } from './db-insert.js'
 
 export const defaultSoldierInput: SoldierOutput = {
   _id: soldierId,
@@ -12,19 +13,6 @@ export const defaultSoldierInput: SoldierOutput = {
   name: 'John Doe',
   rank: { name: 'major', value: 5 },
   updatedAt: new Date(),
-}
-
-export const defaultDutyInput: BaseDuty = {
-  constraints: ['No phones', 'Night duty'],
-  description: 'Soldiers will secure the main gate during night hours.',
-  endTime: new Date('2030-10-10T00:00:00Z'),
-  location: [34.7812, 32.0853],
-  maxRank: 3,
-  minRank: 1,
-  name: 'Guard the Main Gate',
-  soldiersRequired: 5,
-  startTime: new Date('2030-10-01T00:00:00Z'),
-  value: 100,
 }
 
 export const defaultDutyOutput: DutyOutput = {
