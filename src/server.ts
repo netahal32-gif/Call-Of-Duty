@@ -11,6 +11,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
 import dutyRoutes from './routes/duty.js'
 import healthRoutes from './routes/health.js'
+import justiceRoutes from './routes/justice-board.js'
 import soldierRoutes from './routes/soldier.js'
 import { loggerConfig } from './utils/logger/logger-config.js'
 import { loggerErrorHandler } from './utils/logger/logger-error-handler.js'
@@ -33,6 +34,7 @@ const buildServer = async () => {
   await server.register(healthRoutes, { prefix: '/health' })
   await server.register(soldierRoutes, { prefix: '/soldiers' })
   await server.register(dutyRoutes, { prefix: '/duties' })
+  await server.register(justiceRoutes, { prefix: '/justice-board' })
 
   return server
 }
