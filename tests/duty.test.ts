@@ -1,14 +1,15 @@
 import type { FastifyInstance } from 'fastify'
 import buildServer from '../src/server.js'
 import { createDutyService } from '../src/services/duty-service.js'
-import type { Duty, DutyDB } from '../src/types/duty.js'
-import { dutyDb, dutyPostBody } from './data.js'
+import type { Duty, DutyDB, DutyDBWithId } from '../src/types/duty.js'
+import { dutyDbBody, dutyPostBody } from './data.js'
 
 describe('Duty Routes', () => {
   let server: FastifyInstance
   let dutyService: ReturnType<typeof createDutyService>
   const location = [34.7812, 32.0853]
   const soldierIds = ['1234567', '1234568']
+  let insertDuty: (params?: Partial<DutyDB>) => Promise<DutyDBWithId>
 
   beforeAll(async () => {
     const baseUrl = process.env.MONGO_URL!
@@ -16,6 +17,7 @@ describe('Duty Routes', () => {
     process.env.MONGO_URL = url
     server = await buildServer()
     dutyService = createDutyService(server)
+    insertDuty = async (params?: Partial<DutyDB>) => await dutyService.insertDuty(dutyDbBody(params))
   })
 
   afterAll(async () => {
@@ -256,7 +258,7 @@ describe('Duty Routes', () => {
 
   describe('GET /duties/:_id', () => {
     test('GET /duties/:_id should return 200  if a duty with that id is exists in the db', async () => {
-      const id = (await dutyService.insertDuty(dutyDb()))._id
+      const id = (await insertDuty())._id
       const response = await server.inject({
         method: 'GET',
         url: `/duties/${id}`,
@@ -279,7 +281,7 @@ describe('Duty Routes', () => {
 
   describe('GET /duties', () => {
     test('GET /duties?name=Guard the Main Gate should return 200  if there are any duties in the db with that name', async () => {
-      await dutyService.insertDuty(dutyDb({ name: 'Guard the Main Gate' }))
+      await insertDuty({ name: 'Guard the Main Gate' })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?name=Guard the Main Gate',
@@ -295,7 +297,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?description=Soldiers will secure the main gate during night hours. should return 200  if there are any duties in the db with that description', async () => {
-      await dutyService.insertDuty(dutyDb({ description: 'Soldiers will secure the main gate during night hours.' }))
+      await insertDuty({ description: 'Soldiers will secure the main gate during night hours.' })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?description=Soldiers will secure the main gate during night hours.',
@@ -316,7 +318,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?constraints=No phones&constraints=Night duty should return 200  if there are any duties in the db with those constrains', async () => {
-      await dutyService.insertDuty(dutyDb({ constraints: ['No phones', 'Night duty'] }))
+      await insertDuty({ constraints: ['No phones', 'Night duty'] })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?constraints=No phones&constraints=Night duty',
@@ -332,7 +334,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?value=100 should return 200  if there are any duties in the db with that value', async () => {
-      await dutyService.insertDuty(dutyDb({ value: 100 }))
+      await insertDuty({ value: 100 })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?value=100',
@@ -347,12 +349,10 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?startTime=2026-11-19 should return 200 if startTime >= provided', async () => {
-      await dutyService.insertDuty(
-        dutyDb({
-          endTime: new Date('2027-01-01T00:00:00Z'),
-          startTime: new Date('2026-12-01T00:00:00Z'),
-        }),
-      )
+      await insertDuty({
+        endTime: new Date('2027-01-01T00:00:00Z'),
+        startTime: new Date('2026-12-01T00:00:00Z'),
+      })
 
       const response = await server.inject({
         method: 'GET',
@@ -372,12 +372,10 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?endTime=2025-11-19 should return 200 if endTime <= provided', async () => {
-      await dutyService.insertDuty(
-        dutyDb({
-          endTime: new Date('2026-09-15T00:00:00Z'),
-          startTime: new Date('2026-09-01T00:00:00Z'),
-        }),
-      )
+      await insertDuty({
+        endTime: new Date('2026-09-15T00:00:00Z'),
+        startTime: new Date('2026-09-01T00:00:00Z'),
+      })
 
       const response = await server.inject({
         method: 'GET',
@@ -397,7 +395,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?createdAt=2025-11-19 should return 200  if there are any duties in the db with that created date or after', async () => {
-      await dutyService.insertDuty(dutyDb({ createdAt: new Date('2025-11-19T00:00:00Z') }))
+      await insertDuty({ createdAt: new Date('2025-11-19T00:00:00Z') })
 
       const response = await server.inject({
         method: 'GET',
@@ -419,7 +417,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?updatedAt=2025-11-19 should return 200  if there are any duties in the db with that updated date or after', async () => {
-      await dutyService.insertDuty(dutyDb({ updatedAt: new Date('2025-11-19T00:00:00Z') }))
+      await insertDuty({ updatedAt: new Date('2025-11-19T00:00:00Z') })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?updatedAt=2025-11-19',
@@ -440,7 +438,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?location=34.7812&location=32.0853 should return 200  if there are any duties in the db with that location', async () => {
-      await dutyService.insertDuty(dutyDb({ location: location }))
+      await insertDuty({ location: location })
       const response = await server.inject({
         method: 'GET',
         url: `/duties?location=${location[0]}&location=${location[1]}`,
@@ -456,7 +454,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?maxRank=5 should return 200  if there are any duties in the db with that maxRank', async () => {
-      await dutyService.insertDuty(dutyDb({ maxRank: 5 }))
+      await insertDuty({ maxRank: 5 })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?maxRank=5',
@@ -472,7 +470,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?minRank=5 should return 200  if there are any duties in the db with that minRank', async () => {
-      await dutyService.insertDuty(dutyDb({ maxRank: 5, minRank: 5 }))
+      await insertDuty({ maxRank: 5, minRank: 5 })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?minRank=5',
@@ -488,7 +486,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?soldiersRequired=5 should return 200  if there are any duties in the db with that amount of soldiersRequired', async () => {
-      await dutyService.insertDuty(dutyDb({ soldiersRequired: 5 }))
+      await insertDuty({ soldiersRequired: 5 })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?soldiersRequired=5',
@@ -504,7 +502,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?status="unscheduled" should return 200  if there are any duties in the db with that status', async () => {
-      await dutyService.insertDuty(dutyDb({ status: 'unscheduled' }))
+      await insertDuty({ status: 'unscheduled' })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?status=unscheduled',
@@ -520,7 +518,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?soldiers=1234567&soldiers=1234568 should return 200  if there are any duties in the db with those soldiers', async () => {
-      await dutyService.insertDuty(dutyDb({ soldiers: soldierIds }))
+      await insertDuty({ soldiers: soldierIds })
       const response = await server.inject({
         method: 'GET',
         url: `/duties?soldiers=${soldierIds[0]}&soldiers=${soldierIds[1]}`,
@@ -535,7 +533,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?status="none" should return 404  if there aren`t any duties in the db with those params', async () => {
-      await dutyService.insertDuty(dutyDb({ status: 'unscheduled' }))
+      await insertDuty({ status: 'unscheduled' })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?status=none',
@@ -557,7 +555,7 @@ describe('Duty Routes', () => {
       expect(responseBody.message).toBe(`✖ querystring/minRank Too big: expected number to be <=6`)
     })
     test('GET /duties?name=NonExistentDutyName should return 404 if no duties match the name', async () => {
-      await dutyService.insertDuty(dutyDb({ name: 'Guard the Main Gate' }))
+      await insertDuty({ name: 'Guard the Main Gate' })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?name=NonExistentDutyName',
@@ -569,7 +567,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?description=UniqueDescription should return 404 if no duties match the description', async () => {
-      await dutyService.insertDuty(dutyDb({ description: 'Soldiers will secure the main gate during night hours.' }))
+      await insertDuty({ description: 'Soldiers will secure the main gate during night hours.' })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?description=UniqueDescription',
@@ -581,7 +579,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?value=999 should return 404 if no duties match the value', async () => {
-      await dutyService.insertDuty(dutyDb({ value: 100 }))
+      await insertDuty({ value: 100 })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?value=999',
@@ -593,7 +591,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?constraints=UnknownConstraint should return 404 if no duties match the constraints', async () => {
-      await dutyService.insertDuty(dutyDb({ constraints: ['No phones', 'Night duty'] }))
+      await insertDuty({ constraints: ['No phones', 'Night duty'] })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?constraints=UnknownConstraint',
@@ -605,7 +603,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?startTime=3000-01-01 should return 404 if all duties start before the provided date', async () => {
-      await dutyService.insertDuty(dutyDb({ startTime: new Date('2026-12-01T00:00:00Z') }))
+      await insertDuty({ startTime: new Date('2026-12-01T00:00:00Z') })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?startTime=3000-01-01',
@@ -617,7 +615,7 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?endTime=2000-01-01 should return 404 if all duties end after the provided date', async () => {
-      await dutyService.insertDuty(dutyDb({ endTime: new Date('2026-09-15T00:00:00Z') }))
+      await insertDuty({ endTime: new Date('2026-09-15T00:00:00Z') })
       const response = await server.inject({
         method: 'GET',
         url: '/duties?endTime=2000-01-01',
@@ -696,9 +694,9 @@ describe('Duty Routes', () => {
     })
 
     test('GET /duties?name=DutyA&value=50 should return 200 and only duties matching both name and value', async () => {
-      await dutyService.insertDuty(dutyDb({ name: 'DutyA', value: 50 }))
-      await dutyService.insertDuty(dutyDb({ name: 'DutyA', value: 100 }))
-      await dutyService.insertDuty(dutyDb({ name: 'DutyB', value: 50 }))
+      await insertDuty({ name: 'DutyA', value: 50 })
+      await insertDuty({ name: 'DutyA', value: 100 })
+      await insertDuty({ name: 'DutyB', value: 50 })
 
       const response = await server.inject({
         method: 'GET',
@@ -717,7 +715,7 @@ describe('Duty Routes', () => {
 
   describe('DELETE /duties/:_id', () => {
     test('DELETE /duties/:_id should delete the duty and return 204 if the duty was deleted successfully', async () => {
-      const id = (await dutyService.insertDuty(dutyDb({ status: 'unscheduled' })))._id
+      const id = (await insertDuty({ status: 'unscheduled' }))._id
 
       const response = await server.inject({
         method: 'DELETE',
@@ -743,7 +741,7 @@ describe('Duty Routes', () => {
     })
 
     test('DELETE /duties/:_id should return 409 if the duty is already scheduled', async () => {
-      const id = (await dutyService.insertDuty(dutyDb({ status: 'scheduled' })))._id
+      const id = (await insertDuty({ status: 'scheduled' }))._id
       const response = await server.inject({
         method: 'DELETE',
         url: `/duties/${id}`,
@@ -756,13 +754,7 @@ describe('Duty Routes', () => {
 
   describe('PATCH /duties/:_id', () => {
     test('PATCH /duties/:_id should return 200 if  a duty with that id exists and the body request matches the schema', async () => {
-      const id = await makeDuty(server)
-      const beforeResponse = await server.inject({
-        method: 'GET',
-        url: `/duties/${id}`,
-      })
-
-      const beforeDuty  = beforeResponse.json().data
+      const beforeDuty = await insertDuty()
       const beforeHistory = beforeDuty.statusHistory
 
       const payload = {
@@ -796,7 +788,7 @@ describe('Duty Routes', () => {
     })
 
     test('PATCH /duties/:_id should return 400  if the request`s body contains unrecognized keys', async () => {
-      const id = (await dutyService.insertDuty(dutyDb()))._id
+      const id = (await insertDuty())._id
       const payload = {
         id: '1234567',
       }
@@ -828,7 +820,7 @@ describe('Duty Routes', () => {
     })
 
     test('PATCH /duties/:_id should return 404  if there isn`t any fileds', async () => {
-      const id = (await dutyService.insertDuty(dutyDb()))._id
+      const id = (await insertDuty())._id
       const payload = {}
 
       const response = await server.inject({
@@ -842,7 +834,7 @@ describe('Duty Routes', () => {
     })
 
     test('PATCH /duties/:_id should return 409  if the duty is already scheduled', async () => {
-      const id = (await dutyService.insertDuty(dutyDb({ status: 'scheduled' })))._id
+      const id = (await insertDuty({ status: 'scheduled' }))._id
       const payload = { name: 'Name' }
 
       const response = await server.inject({
@@ -858,7 +850,7 @@ describe('Duty Routes', () => {
 
   describe('PUT /duties/:_id/constraints', () => {
     test('PUT /duties/:_id/constraints should return 200  if a duty with that id exists and the request body fits the schema', async () => {
-      const beforeDuty = await dutyService.insertDuty(dutyDb())
+      const beforeDuty = await insertDuty()
       const oldConstraints = beforeDuty?.constraints || []
       const oldUpdateDate = new Date(beforeDuty.updatedAt)
 
@@ -878,7 +870,7 @@ describe('Duty Routes', () => {
     })
 
     test('PUT /duties/:_id/constraints should return 400  if the request body is empty', async () => {
-      const id = (await dutyService.insertDuty(dutyDb()))._id
+      const id = (await insertDuty())._id
       const payload: string[] = []
 
       const response = await server.inject({
@@ -906,7 +898,7 @@ describe('Duty Routes', () => {
     })
 
     test('PUT /duties/:_id/constraints should return 409  if the duty is already scheduled', async () => {
-      const id = (await dutyService.insertDuty(dutyDb({ status: 'scheduled' })))._id
+      const id = (await insertDuty({ status: 'scheduled' }))._id
       const payload = ['Limit']
 
       const response = await server.inject({

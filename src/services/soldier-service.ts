@@ -1,7 +1,7 @@
 import type { Filter, UpdateFilter } from 'mongodb'
 import { soldierCollection } from '../models/soldier-model.js'
 import type { AppServer } from '../server.js'
-import type { Soldier, SoldierBodyToUpdate, SoldierOutput, SoldierQuery } from '../types/soldier.js'
+import type { Soldier, SoldierBodyToUpdate, SoldierDb, SoldierQuery } from '../types/soldier.js'
 import { CustomError, NoSoldierError } from '../utils/error/custom-error.js'
 
 export const createSoldierService = (server: AppServer) => {
@@ -15,7 +15,7 @@ export const createSoldierService = (server: AppServer) => {
 
   const insertSoldier = async (body: Soldier) => {
     const now = new Date()
-    const soldier: SoldierOutput = {
+    const soldier: SoldierDb = {
       ...body,
       createdAt: now,
       updatedAt: now,
@@ -40,7 +40,7 @@ export const createSoldierService = (server: AppServer) => {
   }
 
   const updateSoldier = async (_id: string, body: SoldierBodyToUpdate) => {
-    const updatedFields: UpdateFilter<SoldierOutput> = { ...body }
+    const updatedFields: UpdateFilter<SoldierDb> = { ...body }
 
     updatedFields.updatedAt = new Date()
 

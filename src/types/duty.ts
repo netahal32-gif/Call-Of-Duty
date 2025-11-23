@@ -1,3 +1,4 @@
+import type { ObjectId } from 'mongodb'
 import { z } from 'zod'
 import { timestampsSchema } from './general.js'
 import { soldierIdSchema, valueSchema } from './soldier.js'
@@ -96,3 +97,7 @@ export type DutyDB = z.infer<typeof dutyOutputSchema>
 export type DutyQuery = z.infer<typeof dutyQuerySchema>
 
 export type UpdateDuty = z.infer<typeof updateDutySchema>
+
+export type DutyDBWithId = DutyDB & {
+  _id: ObjectId
+}

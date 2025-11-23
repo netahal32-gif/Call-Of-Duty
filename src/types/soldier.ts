@@ -76,7 +76,7 @@ export const soldiersArrayResponseSchema = z.object({
 
 export type SoldierBodyToUpdate = z.infer<typeof SoldierBodyToUpdateSchema>
 
-export type SoldierOutput = z.infer<typeof soldierOutputSchema>
+export type SoldierDb = z.infer<typeof soldierOutputSchema>
 
 export type Soldier = z.infer<typeof soldierSchema>
 
