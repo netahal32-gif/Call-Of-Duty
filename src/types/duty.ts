@@ -1,54 +1,45 @@
+import type { ObjectId } from 'mongodb'
 import { z } from 'zod'
 import { timestampsSchema } from './general.js'
-import { ranks , soldierIdSchema} from './soldier.js'
+import { soldierIdSchema, valueSchema } from './soldier.js'
 
 export const mongoIdSchema = z.object({ id: z.string().regex(/^[0-9a-fA-F]{24}$/) })
-
-const startBeforeEnd = (data: { startTime: Date; endTime: Date }) => data.startTime < data.endTime
-
-const minRankLessThanMax = (data: { minRank?: number; maxRank?: number }) =>
-  data.minRank === undefined || data.maxRank === undefined || data.minRank <= data.maxRank
-
-const startBeforeEndMessage = { message: 'startTime must be before endTime', path: ['startTime'] }
-const minRankMessage = { message: 'minRank cannot be greater than maxRank', path: ['minRank'] }
-
-export const time = {
-  endTime: z.coerce.date(),
-  startTime: z.coerce.date(),
-}
 
 export const baseDutySchema = z
   .object({
     constraints: z.array(z.string()),
     description: z.string(),
-    endTime: time.endTime.refine(date => date > new Date(), {
+    endTime: z.coerce.date().refine(date => date > new Date(), {
       message: 'EndTime must be a future date',
     }),
     location: z.array(z.coerce.number()).min(2).max(3),
-    maxRank: z.coerce
-      .number()
-      .min(0)
-      .max(ranks.length - 1)
-      .optional(),
-    minRank: z.coerce
-      .number()
-      .min(0)
-      .max(ranks.length - 1)
-      .optional(),
+    maxRank: valueSchema,
+    minRank: valueSchema,
     name: z.string().min(3).max(50),
-    soldiersRequired: z.coerce.number(),
-    startTime: time.startTime.refine(date => date > new Date(), {
+    soldiersRequired: z.coerce.number().min(0),
+    startTime: z.coerce.date().refine(date => date > new Date(), {
       message: 'StartTime must be a future date',
     }),
     value: z.coerce.number().positive(),
   })
   .strict()
-  .refine(startBeforeEnd, startBeforeEndMessage)
-  .refine(minRankLessThanMax, minRankMessage)
+  .refine(
+    ({ startTime, endTime }: { startTime: Date; endTime: Date }) => startTime < endTime,
+    'startTime must be before endTime',
+  )
+  .refine(
+    ({ minRank, maxRank }: { minRank?: number; maxRank?: number }) => minRank! <= maxRank!,
+    'minRank cannot be greater than maxRank',
+  )
+
+export const soldiersAndStatusSchema = {
+  soldiers: z.array(soldierIdSchema),
+  status: z.string(),
+}
 
 export const extrasDutySchema = z.object({
-  soldiers: z.array(soldierIdSchema).default([]),
-  status: z.string().default('unscheduled'),
+  soldiers: soldiersAndStatusSchema.soldiers.default([]),
+  status: soldiersAndStatusSchema.status.default('unscheduled'),
   statusHistory: z
     .array(
       z.object({
@@ -61,29 +52,22 @@ export const extrasDutySchema = z.object({
 
 export const dutySchema = baseDutySchema.safeExtend(extrasDutySchema.shape)
 
-export const dutyOutputSchema = baseDutySchema
-  .safeExtend(extrasDutySchema.shape)
-  .safeExtend(timestampsSchema.shape)
-  .strict()
-  .refine(startBeforeEnd, startBeforeEndMessage)
-  .refine(minRankLessThanMax, minRankMessage)
+export const dutyOutputSchema = dutySchema.safeExtend(timestampsSchema.shape).strict()
 
 export const dutyQuerySchema = baseDutySchema
   .safeExtend(timestampsSchema.shape)
+  .safeExtend(soldiersAndStatusSchema)
+  .omit({ constraints: true })
   .safeExtend({
-    endTime: time.endTime,
-    soldiers: z.array(z.string()),
-    startTime: time.startTime,
-    status: z.string(),
+    constraints: z.preprocess(val => (Array.isArray(val) ? val : [val]), z.array(z.string())),
+    endTime: z.coerce.date(`Could not coerce value into a valid Date`),
+    startTime: z.coerce.date(`Could not coerce value into a valid Date`),
   })
   .strict()
   .partial()
 
 export const updateDutySchema = baseDutySchema
-  .safeExtend({
-    soldiers: z.array(z.string()),
-    status: z.string(),
-  })
+  .safeExtend(soldiersAndStatusSchema)
   .strict()
   .partial()
   .refine(data => Object.keys(data).length > 0, {
@@ -108,8 +92,12 @@ export type BaseDuty = z.infer<typeof baseDutySchema>
 
 export type Duty = z.infer<typeof dutySchema>
 
-export type DutyOutput = z.infer<typeof dutyOutputSchema>
+export type DutyDB = z.infer<typeof dutyOutputSchema>
 
 export type DutyQuery = z.infer<typeof dutyQuerySchema>
 
 export type UpdateDuty = z.infer<typeof updateDutySchema>
+
+export type DutyDBWithId = DutyDB & {
+  _id: ObjectId
+}

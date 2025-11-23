@@ -1,23 +1,25 @@
 import type { Filter, UpdateFilter } from 'mongodb'
 import { soldierCollection } from '../models/soldier-model.js'
 import type { AppServer } from '../server.js'
-import type { Soldier, SoldierBodyToUpdate, SoldierOutput, SoldierQuery } from '../types/soldier.js'
+import type { Soldier, SoldierBodyToUpdate, SoldierDb, SoldierQuery } from '../types/soldier.js'
+import { CustomError, NoSoldierError } from '../utils/error/custom-error.js'
 
 export const createSoldierService = (server: AppServer) => {
   const collection = soldierCollection(server)
 
   const getSoldierById = async (_id: string) => {
-    return collection.findOne({ _id })
+    const soldier = await collection.findOne({ _id })
+    if (!soldier) throw new NoSoldierError(_id)
+    return soldier
   }
 
   const insertSoldier = async (body: Soldier) => {
     const now = new Date()
-    const soldier: SoldierOutput = {
+    const soldier: SoldierDb = {
       ...body,
       createdAt: now,
       updatedAt: now,
     }
-
     await collection.insertOne(soldier)
     return soldier
   }
@@ -32,26 +34,29 @@ export const createSoldierService = (server: AppServer) => {
     if (query.createdAt) mongoQuery.createdAt = { $gte: new Date(query.createdAt) }
     if (query.updatedAt) mongoQuery.updatedAt = { $gte: new Date(query.updatedAt) }
 
-    return collection.find(mongoQuery).toArray()
+    const soldiers = await collection.find(mongoQuery).toArray()
+    if (!soldiers.length) throw new CustomError(404, `No soldiers found with the params: ${JSON.stringify(query)}`)
+    return soldiers
   }
 
   const updateSoldier = async (_id: string, body: SoldierBodyToUpdate) => {
-    const updatedFields: UpdateFilter<SoldierOutput> = { ...body }
+    const updatedFields: UpdateFilter<SoldierDb> = { ...body }
 
     updatedFields.updatedAt = new Date()
 
-    return collection.findOneAndUpdate({ _id }, { $set: updatedFields }, { returnDocument: 'after' })
+    const soldier = await collection.findOneAndUpdate({ _id }, { $set: updatedFields }, { returnDocument: 'after' })
+    if (!soldier) throw new NoSoldierError(_id)
+    return soldier
   }
 
   const deleteSoldier = async (_id: string) => {
     const result = await collection.deleteOne({ _id })
-    if (!result.deletedCount) return null
-
+    if (!result.deletedCount) throw new NoSoldierError(_id)
     return result
   }
 
   const addLimitationsToSoldiers = async (_id: string, body: string[]) => {
-    return collection.findOneAndUpdate(
+    const soldier = await collection.findOneAndUpdate(
       { _id },
       {
         $addToSet: { limitations: { $each: body } },
@@ -59,6 +64,8 @@ export const createSoldierService = (server: AppServer) => {
       },
       { returnDocument: 'after' },
     )
+    if (!soldier) throw new NoSoldierError(_id)
+    return soldier
   }
 
   return {

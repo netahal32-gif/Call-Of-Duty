@@ -2,24 +2,30 @@ import type { Filter, UpdateFilter } from 'mongodb'
 import { ObjectId } from 'mongodb'
 import { dutyCollection } from '../models/duty-model.js'
 import type { AppServer } from '../server.js'
-import type { BaseDuty, Duty, DutyOutput, DutyQuery, UpdateDuty } from '../types/duty.js'
+import type { Duty, DutyDB, DutyQuery, UpdateDuty } from '../types/duty.js'
+import { CustomError, NoDutyError } from '../utils/error/custom-error.js'
 
 export const createDutyService = (server: AppServer) => {
   const collection = dutyCollection(server)
 
-  const getDuty = async (id: string) => {
-    const objectId = new ObjectId(id)
-    return collection.findOne({ _id: objectId }, { projection: { _id: 0 } })
+  const CheckDutyStatus = async (id: string) => {
+    const duty = await getDuty(id)
+    if (!duty) throw new NoDutyError(id)
+    if (duty.status === 'scheduled') throw new CustomError(409, 'Cannot change scheduled duties')
+    return duty
   }
 
-  const insertDuty = async (body: BaseDuty & Partial<Duty>) => {
+  const getDuty = async (id: string) => {
+    const duty = await collection.findOne({ _id: new ObjectId(id) }, { projection: { _id: 0 } })
+    if (!duty) throw new NoDutyError(id)
+    return duty
+  }
+
+  const insertDuty = async (body: Duty) => {
     const currentDate = new Date()
-    const duty: DutyOutput = {
+    const duty: DutyDB = {
       ...body,
       createdAt: currentDate,
-      soldiers: body.soldiers ?? [],
-      status: body.status ?? 'unscheduled',
-      statusHistory: body.statusHistory ?? [{ date: currentDate, status: 'unscheduled' }],
       updatedAt: currentDate,
     }
 
@@ -28,17 +34,10 @@ export const createDutyService = (server: AppServer) => {
   }
 
   const getDutiesByParams = async (query: DutyQuery) => {
-    const mongoQuery: Filter<DutyOutput> = {}
+    const mongoQuery: Filter<DutyDB> = { ...query }
 
     if (query.name) mongoQuery.name = new RegExp(query.name, 'i')
     if (query.description) mongoQuery.description = new RegExp(query.description, 'i')
-
-    if (query.location) mongoQuery.location = query.location
-    if (query.soldiersRequired) mongoQuery.soldiersRequired = query.soldiersRequired
-    if (query.value) mongoQuery.value = query.value
-    if (query.status) mongoQuery.status = query.status
-    if (query.minRank) mongoQuery.minRank = query.minRank
-    if (query.maxRank) mongoQuery.maxRank = query.maxRank
 
     if (query.startTime) mongoQuery.startTime = { $gte: new Date(query.startTime) }
     if (query.endTime) mongoQuery.endTime = { $lte: new Date(query.endTime) }
@@ -48,45 +47,43 @@ export const createDutyService = (server: AppServer) => {
     if (query.constraints?.length) mongoQuery.constraints = { $all: query.constraints }
     if (query.soldiers?.length) mongoQuery.soldiers = { $all: query.soldiers }
 
-    return collection.find(mongoQuery, { projection: { _id: 0 } }).toArray()
+    const duties = await collection.find(mongoQuery, { projection: { _id: 0 } }).toArray()
+    if (!duties.length) throw new CustomError(404, `No duties found with the params: ${JSON.stringify(query)}`)
+    return duties
   }
 
   const updateDuty = async (id: string, body: UpdateDuty) => {
-    const duty = await getDuty(id)
-    if (!duty) return null
-    if (duty.status === 'scheduled') return 'Duty scheduled'
-    const updatedFields: UpdateFilter<DutyOutput> = { ...body }
+    const duty = await CheckDutyStatus(id)
 
-    if (body.status && body.status !== duty!.status) {
-      updatedFields.statusHistory = [...(duty!.statusHistory || []), { date: new Date(), status: body.status }]
+    const updateOps: UpdateFilter<DutyDB> = {
+      $set: { ...body, updatedAt: new Date() },
+    }
+    if (body.status && body.status !== duty.status) {
+      updateOps.$push = {
+        statusHistory: {
+          date: new Date(),
+          status: body.status,
+        },
+      }
     }
 
-    updatedFields.updatedAt = new Date()
-
-    return collection.findOneAndUpdate(
-      { _id: new ObjectId(id) },
-      { $set: updatedFields },
-      {
-        projection: { _id: 0 },
-        returnDocument: 'after',
-      },
-    )
+    return collection.findOneAndUpdate({ _id: new ObjectId(id) }, updateOps, {
+      projection: { _id: 0 },
+      returnDocument: 'after',
+    })
   }
 
   const deleteDuty = async (id: string) => {
-    const objectId = new ObjectId(id)
-    const result = await collection.deleteOne({ _id: objectId })
-    if (!result.deletedCount) return null
-
+    await CheckDutyStatus(id)
+    const result = await collection.deleteOne({ _id: new ObjectId(id) })
+    if (!result.deletedCount) throw new NoDutyError(id)
     return result
   }
 
-  const addLimitationsToDuty = async (id: string, body: string[]) => {
-    const duty = await getDuty(id)
-    if (!duty) return null
-    if (duty!.status === 'scheduled') return 'Duty scheduled'
+  const addConstraintsToDuty = async (id: string, body: string[]) => {
+    await CheckDutyStatus(id)
 
-    return collection.findOneAndUpdate(
+    const updatedDuty = await collection.findOneAndUpdate(
       { _id: new ObjectId(id) },
       {
         $addToSet: { constraints: { $each: body } },
@@ -97,10 +94,13 @@ export const createDutyService = (server: AppServer) => {
         returnDocument: 'after',
       },
     )
+
+    if (!updatedDuty) throw new NoDutyError(id)
+    return updatedDuty
   }
 
   return {
-    addLimitationsToDuty,
+    addConstraintsToDuty,
     deleteDuty,
     getDutiesByParams,
     getDuty,

@@ -8,13 +8,16 @@ export default defineConfig(({ mode }) => {
     test: {
       coverage: {
         enabled: true,
+        exclude: ['node_modules/**', 'dist/**', '**/build/**', 'tests/data.ts'],
         provider: 'v8',
       },
       env,
       environment: 'node',
-      exclude: ['node_modules/**', 'dist/**', '**/build/**'],
+      exclude: ['node_modules/**', 'dist/**', '**/build/**', 'tests/data.ts'],
       globals: true,
       include: ['**/tests/*.test.ts'],
+      isolate: true,
+      threads: false,
     },
   }
 })

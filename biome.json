@@ -33,7 +33,8 @@
     "rules": {
       "correctness": {
         "noNodejsModules": "off",
-        "useImportExtensions": "off"
+        "useImportExtensions": "off",
+        "noUnusedVariables": "off"
       },
       "style": {
         "noImplicitBoolean": "off",

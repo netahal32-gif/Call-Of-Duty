@@ -1,15 +1,22 @@
 import type { FastifyInstance } from 'fastify'
 import buildServer from '../src/server.js'
-import type { Soldier } from '../src/types/soldier.js'
-import { makeSoldier } from './data.js'
-import { soldierPostBody } from './db-insert.js'
+import { createSoldierService } from '../src/services/soldier-service.js'
+import type { Soldier, SoldierDb } from '../src/types/soldier.js'
+import { soldierDbBody, soldierPostBody } from './data.js'
 
 describe('Soldier Routes', () => {
   let server: FastifyInstance
+  let soldierService: ReturnType<typeof createSoldierService>
   const pastDate = '2001-01-01'
+  let insertSoldier: (params?: Partial<SoldierDb>) => Promise<SoldierDb>
 
   beforeAll(async () => {
+    const baseUrl = process.env.MONGO_URL!
+    const url = `${baseUrl}-soldier`
+    process.env.MONGO_URL = url
     server = await buildServer()
+    soldierService = createSoldierService(server)
+    insertSoldier = async (params?: Partial<SoldierDb>) => await soldierService.insertSoldier(soldierDbBody(params))
   })
 
   afterAll(async () => {
@@ -18,13 +25,13 @@ describe('Soldier Routes', () => {
     await server.close()
   })
 
-  afterEach(async () => {
+  beforeEach(async () => {
     const db = server.mongo.db
     if (db) await db.dropDatabase()
   })
 
   describe('POST /soldiers', () => {
-    test('POST /soldiers should return 201  if the body fits the schema', async () => {
+    test('POST /soldiers should return 201  if the body fits the schema', async () => {
       const payload = soldierPostBody()
 
       const response = await server.inject({
@@ -62,7 +69,7 @@ describe('Soldier Routes', () => {
       expect(responseBody.message).toBe('✖ body/rank/value Too big: expected number to be <=6')
     })
 
-    test('POST /soldiers should return 400  if the rank params dont match', async () => {
+    test('POST /soldiers should return 400  if the rank params dont match', async () => {
       const payload = soldierPostBody({
         rank: {
           name: 'private',
@@ -81,7 +88,7 @@ describe('Soldier Routes', () => {
       expect(responseBody.message).toBe('✖ body/rank Rank name and rank value must match')
     })
 
-    test('POST /soldiers should return 400  if there is neither rank.name or rank.value', async () => {
+    test('POST /soldiers should return 400  if there is neither rank.name or rank.value', async () => {
       const payload = soldierPostBody({
         rank: {},
       })
@@ -97,7 +104,7 @@ describe('Soldier Routes', () => {
       expect(responseBody.message).toBe('✖ body/rank Either rank.name or rank.value is required')
     })
 
-    test('POST /soldiers should return 400  if the body is empty', async () => {
+    test('POST /soldiers should return 400  if the body is empty', async () => {
       const payload = {}
 
       const response = await server.inject({
@@ -129,7 +136,7 @@ describe('Soldier Routes', () => {
       expect(responseBody.message).toBe('✖ body/_id Must be a 7-digit number string.')
     })
 
-    test('POST /soldiers should return 400  if the name is less then 3 characters', async () => {
+    test('POST /soldiers should return 400  if the name is less then 3 characters', async () => {
       const payload = soldierPostBody({
         name: 'Jo',
       })
@@ -145,7 +152,7 @@ describe('Soldier Routes', () => {
       expect(responseBody.message).toBe('✖ body/name Too small: expected string to have >=3 characters')
     })
 
-    test('POST /soldiers should return 400  if the name is more then 50 characters', async () => {
+    test('POST /soldiers should return 400  if the name is more then 50 characters', async () => {
       const payload = soldierPostBody({
         name: 'Johhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhn',
       })
@@ -161,13 +168,13 @@ describe('Soldier Routes', () => {
       expect(responseBody.message).toBe('✖ body/name Too big: expected string to have <=50 characters')
     })
 
-    test('POST /soldiers should return 400  if there is an extra param that isn`t in the schema', async () => {
-      const payload = soldierPostBody()
-      const payloadWithExtraParam = { ...payload, extraParam: 'extra' }
+    test('POST /soldiers should return 400  if there is an extra param that isn`t in the schema', async () => {
+      const soldierBody = soldierPostBody()
+      const payload = { ...soldierBody, extraParam: 'extra' }
 
       const response = await server.inject({
         method: 'POST',
-        payload: payloadWithExtraParam,
+        payload,
         url: '/soldiers',
       })
 
@@ -176,8 +183,8 @@ describe('Soldier Routes', () => {
       expect(responseBody.message).toBe('✖ body/ Unrecognized key: "extraParam"')
     })
 
-    test('POST /soldiers should return 500  if there is already a soldier with that id', async () => {
-      const _id = (await makeSoldier(server))._id
+    test('POST /soldiers should return 500  if there is already a soldier with that id', async () => {
+      const _id = (await insertSoldier())._id
       const payload = soldierPostBody({
         _id: _id,
       })
@@ -191,21 +198,21 @@ describe('Soldier Routes', () => {
       const responseBody = response.json()
       expect(response.statusCode).toBe(500)
       expect(responseBody.message).toEqual(
-        `✖ E11000 duplicate key error collection: call-of-duty-test.soldiers index: _id_ dup key: { _id: "${_id}" }`,
+        `✖ E11000 duplicate key error collection: call-of-duty-test-soldier.soldiers index: _id_ dup key: { _id: "${_id}" }`,
       )
     })
   })
 
   describe('GET /soldiers/:_id', () => {
-    test('GET /soldiers/:_id should return 200  if a soldier with that id is exists in the db', async () => {
-      const id = (await makeSoldier(server))._id
+    test('GET /soldiers/:_id should return 200  if a soldier with that id is exists in the db', async () => {
+      const _id = (await insertSoldier())._id
       const response = await server.inject({
         method: 'GET',
-        url: `/soldiers/${id}`,
+        url: `/soldiers/${_id}`,
       })
       const responseBody = response.json()
       expect(response.statusCode).toBe(200)
-      expect(responseBody.data._id).toBe(id)
+      expect(responseBody.data._id).toBe(_id)
     })
 
     test('GET /soldiers/:id should return 404 if no soldier with that id exist in the db', async () => {
@@ -217,13 +224,13 @@ describe('Soldier Routes', () => {
 
       const responseBody = response.json()
       expect(response.statusCode).toBe(404)
-      expect(responseBody.message).toBe(`No soldier found with id ${id}`)
+      expect(responseBody.message).toBe(`No soldier found with the id: ${id}`)
     })
   })
 
   describe('GET /soldiers', () => {
-    test('GET /soldiers?rankValue=5 should return 200  if there are any soldiers in the db that are at rankValue 5', async () => {
-      await makeSoldier(server, { rank: { value: 5 } })
+    test('GET /soldiers?rankValue=5 should return 200  if there are any soldiers in the db that are at rankValue 5', async () => {
+      await insertSoldier({ rank: { value: 5 } })
       const response = await server.inject({
         method: 'GET',
         url: '/soldiers?rankValue=5',
@@ -237,8 +244,8 @@ describe('Soldier Routes', () => {
       expect(soldiers.every((s: { rank: { value: number } }) => s.rank.value === 5)).toBeTruthy()
     })
 
-    test('GET /soldiers?name=John%20Doe should return 200  if there are any soldiers in the db that are named John Doe', async () => {
-      await makeSoldier(server, { name: 'John Doe' })
+    test('GET /soldiers?name=John%20Doe should return 200  if there are any soldiers in the db that are named John Doe', async () => {
+      await insertSoldier({ name: 'John Doe' })
       const response = await server.inject({
         method: 'GET',
         url: '/soldiers?name=John%20Doe',
@@ -252,8 +259,8 @@ describe('Soldier Routes', () => {
       expect(soldiers.every((s: { name: string }) => s.name === 'John Doe')).toBeTruthy()
     })
 
-    test('GET /soldiers?rankName=major should return 200  if there are any soldiers in the db that are at rank major', async () => {
-      await makeSoldier(server, { rank: { name: 'major' } })
+    test('GET /soldiers?rankName=major should return 200  if there are any soldiers in the db that are at rank major', async () => {
+      await insertSoldier({ rank: { name: 'major' } })
       const response = await server.inject({
         method: 'GET',
         url: '/soldiers?rankName=major',
@@ -266,8 +273,8 @@ describe('Soldier Routes', () => {
       expect(soldiers.every((s: { rank: { name: string } }) => s.rank.name === 'major')).toBeTruthy()
     })
 
-    test('GET /soldiers?limitations=sunlight&limitations=running should return 200  if there are any soldiers in the db that have sunlight and running as their limitations', async () => {
-      await makeSoldier(server, { limitations: ['sunlight', 'running'] })
+    test('GET /soldiers?limitations=sunlight&limitations=running should return 200  if there are any soldiers in the db that have sunlight and running as their limitations', async () => {
+      await insertSoldier({ limitations: ['sunlight', 'running'] })
       const response = await server.inject({
         method: 'GET',
         url: '/soldiers?limitations=sunlight&limitations=running',
@@ -282,8 +289,8 @@ describe('Soldier Routes', () => {
     })
 
     test(`GET /soldiers?createdAt=${pastDate} should return 200 if there are any soldiers in the db that were created after the date`, async () => {
-      await makeSoldier(server)
-      await makeSoldier(server, { _id: '1234567', createdAt: new Date('2000-10-10T00:00:00Z') })
+      await insertSoldier()
+      await insertSoldier({ _id: '1234567', createdAt: new Date('2000-10-10T00:00:00Z') })
       const response = await server.inject({
         method: 'GET',
         url: `/soldiers?createdAt=${pastDate}`,
@@ -300,12 +307,13 @@ describe('Soldier Routes', () => {
     })
 
     test(`GET /soldiers?updatedAt=${pastDate} should return 200 if there are any soldiers in the db that were updated after the date`, async () => {
-      await makeSoldier(server)
-      await makeSoldier(server, {
+      await insertSoldier()
+      await insertSoldier({
         _id: '1234567',
         createdAt: new Date('2000-10-10T00:00:00Z'),
         updatedAt: new Date('2000-10-10T00:00:00Z'),
       })
+
       const response = await server.inject({
         method: 'GET',
         url: `/soldiers?updatedAt=${pastDate}`,
@@ -346,15 +354,15 @@ describe('Soldier Routes', () => {
 
   describe('DELETE /soldiers/:_id', () => {
     test('DELETE /soldiers/:_id should delete the soldier and return 204 if the soldier was deleted successfully', async () => {
-      const id = (await makeSoldier(server))._id
+      const _id = (await insertSoldier())._id
       const response = await server.inject({
         method: 'DELETE',
-        url: `/soldiers/${id}`,
+        url: `/soldiers/${_id}`,
       })
 
       const afterResponse = await server.inject({
         method: 'GET',
-        url: `/soldiers/${id}`,
+        url: `/soldiers/${_id}`,
       })
 
       expect(response.statusCode).toBe(204)
@@ -372,10 +380,10 @@ describe('Soldier Routes', () => {
   })
 
   describe('PATCH /soldiers/:_id', () => {
-    test('PATCH /soldiers/:_id should return 200 if  a soldier with that id exists and the body request matches the schema', async () => {
-      const beforeSoldier = await makeSoldier(server)
+    test('PATCH /soldiers/:_id should return 200 if  a soldier with that id exists and the body request matches the schema', async () => {
+      const beforeSoldier = await insertSoldier()
 
-      const soldierPatchBody = {
+      const payload = {
         name: 'Peggy Carter',
         rank: {
           value: 0,
@@ -384,7 +392,7 @@ describe('Soldier Routes', () => {
 
       const response = await server.inject({
         method: 'PATCH',
-        payload: soldierPatchBody,
+        payload,
         url: `/soldiers/${beforeSoldier._id}`,
       })
       const soldier = response.json().data
@@ -392,55 +400,55 @@ describe('Soldier Routes', () => {
       expect(response.statusCode).toBe(200)
       expect(soldier).toMatchObject({
         _id: beforeSoldier._id,
-        name: soldierPatchBody.name,
+        name: payload.name,
         rank: {
           name: 'private',
-          value: soldierPatchBody.rank.value,
+          value: payload.rank.value,
         },
       })
       expect(new Date(soldier.createdAt).toISOString()).toBe(new Date(beforeSoldier.createdAt).toISOString())
       expect(new Date(soldier.updatedAt).getTime()).toBeGreaterThan(new Date(beforeSoldier.updatedAt).getTime())
     })
 
-    test('PATCH /soldiers/:_id should return 400  if the request`s body contains unrecognized keys', async () => {
-      const id = (await makeSoldier(server))._id
-      const soldierPatchBody = {
+    test('PATCH /soldiers/:_id should return 400  if the request`s body contains unrecognized keys', async () => {
+      const _id = (await insertSoldier())._id
+      const payload = {
         id: '1234567',
       }
 
       const response = await server.inject({
         method: 'PATCH',
-        payload: soldierPatchBody,
-        url: `/soldiers/${id}`,
+        payload,
+        url: `/soldiers/${_id}`,
       })
       const responseBody = response.json()
       expect(response.statusCode).toBe(400)
       expect(responseBody.message).toBe('✖ body/ Unrecognized key: "id"')
     })
 
-    test('PATCH /soldiers/:_id should return 404  if there isn`t a soldier with that id', async () => {
+    test('PATCH /soldiers/:_id should return 404  if there isn`t a soldier with that id', async () => {
       const id = '0000000'
-      const soldierPatchBody = {
+      const payload = {
         name: 'Name',
       }
 
       const response = await server.inject({
         method: 'PATCH',
-        payload: soldierPatchBody,
+        payload,
         url: `/soldiers/${id}`,
       })
       const responseBody = response.json()
       expect(response.statusCode).toBe(404)
-      expect(responseBody.message).toBe('No soldier found with id 0000000')
+      expect(responseBody.message).toBe('No soldier found with the id: 0000000')
     })
 
-    test('PATCH /soldiers/:_id should return 404  if there isn`t any fileds', async () => {
+    test('PATCH /soldiers/:_id should return 404  if there isn`t any fileds', async () => {
       const id = '0000000'
-      const soldierPatchBody = {}
+      const payload = {}
 
       const response = await server.inject({
         method: 'PATCH',
-        payload: soldierPatchBody,
+        payload,
         url: `/soldiers/${id}`,
       })
       const responseBody = response.json()
@@ -450,49 +458,49 @@ describe('Soldier Routes', () => {
   })
 
   describe('PUT /soldiers/:_id/limitations', () => {
-    test('PUT /soldiers/:_id/limitations should return 200  if a soldier with that id exists and the request body fits the schema', async () => {
-      const beforeSoldier = await makeSoldier(server)
+    test('PUT /soldiers/:_id/limitations should return 200  if a soldier with that id exists and the request body fits the schema', async () => {
+      const beforeSoldier = await insertSoldier()
 
       const oldLimitations = beforeSoldier.limitations || []
       const oldUpdateDate = new Date(beforeSoldier.updatedAt)
 
-      const soldierPutBody = ['STANDING', 'sUn']
+      const payload = ['STANDING', 'sUn']
 
       const response = await server.inject({
         method: 'PUT',
-        payload: soldierPutBody,
+        payload,
         url: `/soldiers/${beforeSoldier._id}/limitations`,
       })
       const responseBody = response.json()
       const soldier = responseBody.data
-      const expectedLimitations = [...oldLimitations, ...soldierPutBody.map(l => l.toLowerCase())]
+      const expectedLimitations = [...oldLimitations, ...payload.map(l => l.toLowerCase())]
 
       expect(response.statusCode).toBe(200)
       expect(soldier.limitations).toEqual(expectedLimitations)
       expect(new Date(soldier.updatedAt).getTime()).toBeGreaterThan(oldUpdateDate.getTime())
     })
 
-    test('PUT /soldiers/:_id/limitations should return 400  if the request body is empty', async () => {
-      const id = (await makeSoldier(server))._id
-      const soldierPutBody: string[] = []
+    test('PUT /soldiers/:_id/limitations should return 400  if the request body is empty', async () => {
+      const _id = (await insertSoldier())._id
+      const payload: string[] = []
 
       const response = await server.inject({
         method: 'PUT',
-        payload: soldierPutBody,
-        url: `/soldiers/${id}/limitations`,
+        payload,
+        url: `/soldiers/${_id}/limitations`,
       })
       const responseBody = response.json()
       expect(response.statusCode).toBe(400)
       expect(responseBody.message).toBe('✖ body/ At least one limitation must be provided to update')
     })
 
-    test('PUT /soldiers/:_id/limitations should return 404  if there is no soldier with that id', async () => {
+    test('PUT /soldiers/:_id/limitations should return 404  if there is no soldier with that id', async () => {
       const id = '0000000'
-      const soldierPutBody = ['Limit']
+      const payload = ['Limit']
 
       const response = await server.inject({
         method: 'PUT',
-        payload: soldierPutBody,
+        payload,
         url: `/soldiers/${id}/limitations`,
       })
       const responseBody = response.json()
