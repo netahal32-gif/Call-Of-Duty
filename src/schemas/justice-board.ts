@@ -6,6 +6,7 @@ export const getAllScoresSchema = {
   schema: {
     response: {
       200: justiceArrayResponseSchema,
+      404: errorResponseSchema,
     },
   },
 }

@@ -17,7 +17,6 @@ export const createSoldierService = (server: AppServer) => {
       createdAt: now,
       updatedAt: now,
     }
-
     await collection.insertOne(soldier)
     return soldier
   }

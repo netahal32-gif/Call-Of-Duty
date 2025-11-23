@@ -7,6 +7,9 @@ describe('Duty Routes', () => {
   let server: FastifyInstance
 
   beforeAll(async () => {
+    const baseUrl = process.env.MONGO_URL!
+    const url = `${baseUrl}-duty`
+    process.env.MONGO_URL = url
     server = await buildServer()
   })
 
@@ -16,7 +19,7 @@ describe('Duty Routes', () => {
     await server.close()
   })
 
-  afterEach(async () => {
+  beforeEach(async () => {
     const db = server.mongo.db
     if (db) await db.dropDatabase()
   })

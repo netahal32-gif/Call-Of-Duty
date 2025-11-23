@@ -7,6 +7,9 @@ const justiceRoutes = async (server: AppServer) => {
 
   server.get('/', getAllScoresSchema, async (_, res) => {
     const justice = await justiceService.getBoard()
+    if (!justice.length) {
+      return res.status(404).send({ message: 'No soldiers found in the db' })
+    }
     return res.status(200).send({ data: justice, message: 'Justice board retrieved successfully' })
   })
 
@@ -17,7 +20,7 @@ const justiceRoutes = async (server: AppServer) => {
         message: `No soldier found with id ${req.params._id} `,
       })
     }
-    return res.status(200).send({ data: justice, message: 'Soldier justice score retrieved successfully' })
+    return res.status(200).send({ data: justice, message: 'Soldier`s score retrieved successfully' })
   })
 }
 

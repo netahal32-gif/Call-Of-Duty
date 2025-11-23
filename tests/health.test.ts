@@ -5,11 +5,19 @@ describe('Health', () => {
   let server: FastifyInstance
 
   beforeAll(async () => {
+    const baseUrl = process.env.MONGO_URL!
+    const url = `${baseUrl}-health`
+    process.env.MONGO_URL = url
     server = await buildServer()
   })
 
   afterAll(async () => {
     await server.close()
+  })
+
+  beforeEach(async () => {
+    const db = server.mongo.db
+    if (db) await db.dropDatabase()
   })
 
   test('GET /health should return 200 "status ok" if the server is working', async () => {

@@ -15,6 +15,8 @@ export default defineConfig(({ mode }) => {
       exclude: ['node_modules/**', 'dist/**', '**/build/**'],
       globals: true,
       include: ['**/tests/*.test.ts'],
+      isolate: true,
+      threads: false,
     },
   }
 })
