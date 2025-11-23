@@ -12,16 +12,16 @@ export const createJusticeService = (server: AppServer) => {
       .aggregate([
         {
           $lookup: {
-            as: 'duties',
+            as: 'dutiesCount',
             from: 'duties',
             let: { soldierId: '$_id' },
-            pipeline: [{ $match: { $expr: { $in: ['$$soldierId', '$soldiers'] } } }],
+            pipeline: [{ $match: { $expr: { $in: ['$$soldierId', '$soldiers'] } } }, { $count: 'count' }],
           },
         },
         {
           $project: {
             _id: 1,
-            score: { $size: '$duties' },
+            score: { $sum: '$dutiesCount.count' },
           },
         },
         { $sort: { score: -1 } },

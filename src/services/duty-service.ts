@@ -34,7 +34,7 @@ export const createDutyService = (server: AppServer) => {
   }
 
   const getDutiesByParams = async (query: DutyQuery) => {
-    const mongoQuery: Filter<DutyOutput> = {}
+    const mongoQuery: Filter<DutyDB> = { ...query }
 
     if (query.name) mongoQuery.name = new RegExp(query.name, 'i')
     if (query.description) mongoQuery.description = new RegExp(query.description, 'i')
