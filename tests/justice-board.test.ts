@@ -20,15 +20,15 @@ describe('Justice Routes', () => {
 
   beforeEach(async () => {
     const db = server.mongo.db
-    if (db) await db.dropDatabase()
-  })
+    if (db) await db.dropDatabase()+
+  }) 
 
   describe('GET /justice-board', () => {
     test('GET /justice-board should return 200 if there are any soldiers in the db', async () => {
-      const soldier1Id = await makeSoldier(server, { _id: '1234567' })
-      const soldier2Id = await makeSoldier(server, { _id: '1234568' })
-      const soldier3Id = await makeSoldier(server, { _id: '1234569' })
-      const soldier4Id = await makeSoldier(server, { _id: '1234560' })
+      const soldier1Id =( await makeSoldier(server, { _id: '1234567' }))._id
+      const soldier2Id = (await makeSoldier(server, { _id: '1234568' }))._id
+      const soldier3Id = (await makeSoldier(server, { _id: '1234569' }))._id
+      const soldier4Id =( await makeSoldier(server, { _id: '1234560' }))._id
       await makeDuty(server, { soldiers: [soldier1Id, soldier2Id, soldier3Id] })
       await makeDuty(server, { soldiers: [soldier1Id, soldier2Id] })
       await makeDuty(server, { soldiers: [soldier1Id] })
@@ -63,7 +63,7 @@ describe('Justice Routes', () => {
 
   describe('GET /justice-board/:_id', () => {
     test('GET /justice-board should return 200 if there a soldier with that id', async () => {
-      const soldier1Id = await makeSoldier(server)
+      const soldier1Id = (await makeSoldier(server))._id
       await makeDuty(server, { soldiers: [soldier1Id] })
       const response = await server.inject({
         method: 'GET',

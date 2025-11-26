@@ -9,9 +9,6 @@ describe('Soldier Routes', () => {
   const pastDate = '2001-01-01'
 
   beforeAll(async () => {
-    const baseUrl = process.env.MONGO_URL!
-    const url = `${baseUrl}-soldiers`
-    process.env.MONGO_URL = url
     server = await buildServer()
   })
 
@@ -21,7 +18,7 @@ describe('Soldier Routes', () => {
     await server.close()
   })
 
-  beforeEach(async () => {
+  afterEach(async () => {
     const db = server.mongo.db
     if (db) await db.dropDatabase()
   })
@@ -29,12 +26,13 @@ describe('Soldier Routes', () => {
   describe('POST /soldiers', () => {
     test('POST /soldiers should return 201  if the body fits the schema', async () => {
       const payload = soldierPostBody()
-
+      
       const response = await server.inject({
         method: 'POST',
         payload,
         url: '/soldiers',
       })
+      console.log(response,111111111111111111)
       const soldier = response.json().data
 
       expect(response.statusCode).toBe(201)
@@ -194,7 +192,7 @@ describe('Soldier Routes', () => {
       const responseBody = response.json()
       expect(response.statusCode).toBe(500)
       expect(responseBody.message).toEqual(
-        `✖ E11000 duplicate key error collection: call-of-duty-test-soldiers.soldiers index: _id_ dup key: { _id: "${_id}" }`,
+        `✖ E11000 duplicate key error collection: call-of-duty-test.soldiers index: _id_ dup key: { _id: "${_id}" }`,
       )
     })
   })
