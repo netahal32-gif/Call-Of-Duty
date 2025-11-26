@@ -1,18 +1,17 @@
-import type { FastifyInstance } from 'fastify'
-import { createDutyService } from '../src/services/duty-service.js'
-import { createSoldierService } from '../src/services/soldier-service.js'
-import type { DutyOutput } from '../src/types/duty.js'
-import type { SoldierOutput, SoldierRank } from '../src/types/soldier.js'
+import type { BaseDuty, DutyDB } from '../src/types/duty.js'
+import type { Soldier, SoldierOutput, SoldierRank } from '../src/types/soldier.js'
 import { ranks } from '../src/types/soldier.js'
-import { defaultDutyInput } from './db-insert.js'
-const clone = <T>(value: T): T => structuredClone(value)
 
-export const defaultSoldierInput: SoldierOutput = {
+export const defaultSoldierInput: Soldier = {
   _id: '1000001',
-  createdAt: new Date(),
   limitations: ['sunlight', 'running'],
   name: 'John Doe',
   rank: { name: 'major', value: 5 },
+}
+
+export const defaultSoldierOutput: SoldierOutput = {
+  ...defaultSoldierInput,
+  createdAt: new Date(),
   updatedAt: new Date(),
 }
 
@@ -27,17 +26,36 @@ const normalizeRank = (r: SoldierRank) => {
   }
 }
 
-export const buildSoldier = (input: Partial<SoldierOutput>) => {
-  const merged = { ...defaultSoldierInput, ...input }
-  return { ...merged, rank: normalizeRank(merged.rank) }
+export const soldierPostBody = (input: Partial<Soldier> = {}) => {
+  return {
+    ...defaultSoldierInput,
+    ...input,
+    rank: normalizeRank(input.rank ?? defaultSoldierInput.rank),
+  }
 }
 
-export const makeSoldier = async (server: FastifyInstance, input: Partial<SoldierOutput> = {}) => {
-  const body = buildSoldier(input)
-  return createSoldierService(server).insertSoldier(body)
+export const soldierDb = (input: Partial<SoldierOutput> = {}) => {
+  return {
+    ...defaultSoldierOutput,
+    ...input,
+    rank: normalizeRank(input.rank ?? defaultSoldierOutput.rank),
+  }
 }
 
-export const defaultDutyOutput: DutyOutput = {
+export const defaultDutyInput: BaseDuty = {
+  constraints: ['No phones', 'Night duty'],
+  description: 'Soldiers will secure the main gate during night hours.',
+  endTime: new Date('2030-10-10T00:00:00Z'),
+  location: [34.7812, 32.0853],
+  maxRank: 3,
+  minRank: 1,
+  name: 'Guard the Main Gate',
+  soldiersRequired: 5,
+  startTime: new Date('2030-10-01T00:00:00Z'),
+  value: 100,
+}
+
+export const defaultDutyOutput: DutyDB = {
   ...defaultDutyInput,
   createdAt: new Date(),
   soldiers: [],
@@ -46,15 +64,16 @@ export const defaultDutyOutput: DutyOutput = {
   updatedAt: new Date(),
 }
 
-export const makeDuty = async (server: FastifyInstance, input: Partial<DutyOutput> = {}) => {
-  const merged: DutyOutput = {
+export const dutyPostBody = (input: Partial<BaseDuty> = {}) => {
+  return {
+    ...defaultDutyInput,
+    ...input,
+  }
+}
+
+export const dutyDb = (input: Partial<DutyDB> = {}) => {
+  return {
     ...defaultDutyOutput,
     ...input,
-    constraints: clone(input.constraints ?? defaultDutyOutput.constraints),
-    location: clone(input.location ?? defaultDutyOutput.location),
-    soldiers: clone(input.soldiers ?? defaultDutyOutput.soldiers),
-    statusHistory: clone(input.statusHistory ?? defaultDutyOutput.statusHistory),
   }
-  const result = await createDutyService(server).insertDuty(merged)
-  return result._id
 }
