@@ -5,10 +5,10 @@ import { ranks } from '../src/types/soldier.js'
 
 export const defaultSoldierInput: SoldierOutput = {
   _id: '1000001',
-  createdAt: new Date(),
   limitations: ['sunlight', 'running'],
   name: 'John Doe',
   rank: { name: 'major', value: 5 },
+  createdAt: new Date(),
   updatedAt: new Date(),
 }
 
