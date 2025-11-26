@@ -20,7 +20,7 @@ describe('Soldier Routes', () => {
     await server.close()
   })
 
-  beforeEach(async () => {
+  afterEach(async () => {
     const db = server.mongo.db
     if (db) await db.dropDatabase()
   })
