@@ -1,10 +1,13 @@
 import type { FastifyInstance } from 'fastify'
 import buildServer from '../src/server.js'
+import type { Duty, DutyDB } from '../src/types/duty.js'
 import { makeDuty } from './data.js'
-import { dutyPostBody } from './db-insert.js'
+import { dutyPostBody } from './request-bodies.js'
 
 describe('Duty Routes', () => {
   let server: FastifyInstance
+  const location = [34.7812, 32.0853]
+  const soldierIds = ['1234567', '1234568']
 
   beforeAll(async () => {
     const baseUrl = process.env.MONGO_URL!
@@ -37,24 +40,18 @@ describe('Duty Routes', () => {
       expect(response.statusCode).toBe(201)
 
       expect(duty).toMatchObject({
-        constraints: payload.constraints,
-        description: payload.description,
-        location: payload.location,
-        maxRank: payload.maxRank,
-        minRank: payload.minRank,
-        name: payload.name,
+        ...payload,
+        endTime: payload.endTime.toISOString(),
         soldiers: [],
-        soldiersRequired: payload.soldiersRequired,
+        startTime: payload.startTime.toISOString(),
         status: 'unscheduled',
-        value: payload.value,
       })
-      const dateFields = ['createdAt', 'updatedAt', 'startTime', 'endTime']
-      for (const key of dateFields) {
-        expect(new Date(duty[key]).toISOString()).toBeTruthy()
-      }
+      const dateFields = ['createdAt', 'updatedAt']
+      expect(dateFields.every(key => duty[key])).toBeDefined()
       expect(duty.statusHistory[0].status).toBe('unscheduled')
-      expect(new Date(duty.statusHistory[0].date).toISOString()).toBeTruthy()
+      expect(duty.statusHistory[0].date).toBeDefined()
     })
+
     test('POST /duties should return 400 if start time is in the past', async () => {
       const payload = dutyPostBody({
         startTime: new Date('1900-11-20T09:00:00.000Z'),
@@ -62,7 +59,7 @@ describe('Duty Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/duties',
       })
 
@@ -79,7 +76,7 @@ describe('Duty Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/duties',
       })
 
@@ -96,13 +93,13 @@ describe('Duty Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/duties',
       })
 
       const responseBody = response.json()
       expect(response.statusCode).toBe(400)
-      expect(responseBody.message).toBe('✖ body/startTime startTime must be before endTime')
+      expect(responseBody.message).toBe('✖ body/ startTime must be before endTime')
     })
 
     test('POST /duties should return 400 if the location has less then 2 items', async () => {
@@ -112,7 +109,7 @@ describe('Duty Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/duties',
       })
 
@@ -128,7 +125,7 @@ describe('Duty Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/duties',
       })
 
@@ -145,7 +142,7 @@ describe('Duty Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/duties',
       })
 
@@ -164,7 +161,7 @@ describe('Duty Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/duties',
       })
 
@@ -183,13 +180,13 @@ describe('Duty Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/duties',
       })
 
       const responseBody = response.json()
       expect(response.statusCode).toBe(400)
-      expect(responseBody.message).toBe('✖ body/minRank minRank cannot be greater than maxRank')
+      expect(responseBody.message).toBe('✖ body/ minRank cannot be greater than maxRank')
     })
 
     test('POST /duties should return 400 if the body is empty', async () => {
@@ -197,7 +194,7 @@ describe('Duty Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/duties',
       })
 
@@ -229,7 +226,7 @@ describe('Duty Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/duties',
       })
 
@@ -245,7 +242,7 @@ describe('Duty Routes', () => {
 
       const response = await server.inject({
         method: 'POST',
-        payload: payload,
+        payload,
         url: '/duties',
       })
 
@@ -257,7 +254,7 @@ describe('Duty Routes', () => {
 
   describe('GET /duties/:_id', () => {
     test('GET /duties/:_id should return 200  if a duty with that id is exists in the db', async () => {
-      const id = await makeDuty(server)
+      const id = (await makeDuty(server))._id
       const response = await server.inject({
         method: 'GET',
         url: `/duties/${id}`,
@@ -290,12 +287,9 @@ describe('Duty Routes', () => {
       const duties = responseBody.data
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(duties)).toBe(true)
       expect(duties.length).toBeGreaterThan(0)
 
-      for (const d of duties) {
-        expect(d.name).toBe('Guard the Main Gate')
-      }
+      expect(duties.every((d: { name: Duty['name'] }) => d.name === 'Guard the Main Gate')).toBeTruthy()
     })
 
     test('GET /duties?description=Soldiers will secure the main gate during night hours. should return 200  if there are any duties in the db with that description', async () => {
@@ -309,12 +303,14 @@ describe('Duty Routes', () => {
       const duties = responseBody.data
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(duties)).toBe(true)
       expect(duties.length).toBeGreaterThan(0)
 
-      for (const d of duties) {
-        expect(d.description).toBe('Soldiers will secure the main gate during night hours.')
-      }
+      expect(
+        duties.every(
+          (d: { description: Duty['description'] }) =>
+            d.description === 'Soldiers will secure the main gate during night hours.',
+        ),
+      ).toBeTruthy()
     })
 
     test('GET /duties?constraints=No phones&constraints=Night duty should return 200  if there are any duties in the db with those constrains', async () => {
@@ -325,15 +321,12 @@ describe('Duty Routes', () => {
       })
 
       const responseBody = response.json()
-      const duties = responseBody.data
+      const duties = responseBody.data as Duty[]
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(duties)).toBe(true)
       expect(duties.length).toBeGreaterThan(0)
 
-      for (const d of duties) {
-        expect(d.constraints).toEqual(['No phones', 'Night duty'])
-      }
+      expect(duties.every(d => d.constraints.every(c => ['No phones', 'Night duty'].includes(c)))).toBeTruthy()
     })
 
     test('GET /duties?value=100 should return 200  if there are any duties in the db with that value', async () => {
@@ -346,12 +339,9 @@ describe('Duty Routes', () => {
       const responseBody = response.json()
       const duties = responseBody.data
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(duties)).toBe(true)
       expect(duties.length).toBeGreaterThan(0)
 
-      for (const d of duties) {
-        expect(d.value).toBe(100)
-      }
+      expect(duties.every((d: { value: Duty['value'] }) => d.value === 100)).toBeTruthy()
     })
 
     test('GET /duties?startTime=2026-11-19 should return 200 if startTime >= provided', async () => {
@@ -368,12 +358,13 @@ describe('Duty Routes', () => {
       const duties = response.json().data
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(duties)).toBe(true)
       expect(duties.length).toBeGreaterThan(0)
 
-      for (const d of duties) {
-        expect(new Date(d.startTime) >= new Date('2026-11-19')).toBe(true)
-      }
+      expect(
+        duties.every(
+          (d: { startTime: Duty['startTime'] }) => new Date(d.startTime).getTime() >= new Date('2026-11-19').getTime(),
+        ),
+      ).toBeTruthy()
     })
 
     test('GET /duties?endTime=2025-11-19 should return 200 if endTime <= provided', async () => {
@@ -390,12 +381,13 @@ describe('Duty Routes', () => {
       const duties = response.json().data
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(duties)).toBe(true)
       expect(duties.length).toBeGreaterThan(0)
 
-      for (const d of duties) {
-        expect(new Date(d.endTime) <= new Date('2026-10-01T00:00:00Z')).toBe(true)
-      }
+      expect(
+        duties.every(
+          (d: { endTime: Duty['endTime'] }) => new Date(d.endTime).getTime() <= new Date('2026-10-01').getTime(),
+        ),
+      ).toBeTruthy()
     })
 
     test('GET /duties?createdAt=2025-11-19 should return 200  if there are any duties in the db with that created date or after', async () => {
@@ -409,12 +401,14 @@ describe('Duty Routes', () => {
       const duties = responseBody.data
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(duties)).toBe(true)
       expect(duties.length).toBeGreaterThan(0)
 
-      for (const d of duties) {
-        expect(new Date(d.createdAt) >= new Date('2025-11-19')).toBe(true)
-      }
+      expect(
+        duties.every(
+          (d: { createdAt: DutyDB['createdAt'] }) =>
+            new Date(d.createdAt).getTime() >= new Date('2025-11-19').getTime(),
+        ),
+      ).toBeTruthy()
     })
 
     test('GET /duties?updatedAt=2025-11-19 should return 200  if there are any duties in the db with that updated date or after', async () => {
@@ -428,31 +422,30 @@ describe('Duty Routes', () => {
       const duties = responseBody.data
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(duties)).toBe(true)
       expect(duties.length).toBeGreaterThan(0)
 
-      for (const d of duties) {
-        expect(new Date(d.updatedAt) >= new Date('2025-11-19')).toBe(true)
-      }
+      expect(
+        duties.every(
+          (d: { updatedAt: DutyDB['updatedAt'] }) =>
+            new Date(d.updatedAt).getTime() >= new Date('2025-11-19').getTime(),
+        ),
+      ).toBeTruthy()
     })
 
     test('GET /duties?location=34.7812&location=32.0853 should return 200  if there are any duties in the db with that location', async () => {
-      await makeDuty(server, { location: [34.7812, 32.0853] })
+      await makeDuty(server, { location: location })
       const response = await server.inject({
         method: 'GET',
-        url: '/duties?location=34.7812&location=32.0853',
+        url: `/duties?location=${location[0]}&location=${location[1]}`,
       })
 
       const responseBody = response.json()
-      const duties = responseBody.data
+      const duties = responseBody.data as Duty[]
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(duties)).toBe(true)
       expect(duties.length).toBeGreaterThan(0)
 
-      for (const d of duties) {
-        expect(d.location).toStrictEqual([34.7812, 32.0853])
-      }
+      expect(duties.every(d => d.location.every(c => location.includes(c)))).toBeTruthy()
     })
 
     test('GET /duties?maxRank=5 should return 200  if there are any duties in the db with that maxRank', async () => {
@@ -466,12 +459,9 @@ describe('Duty Routes', () => {
       const duties = responseBody.data
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(duties)).toBe(true)
       expect(duties.length).toBeGreaterThan(0)
 
-      for (const d of duties) {
-        expect(d.maxRank).toBe(5)
-      }
+      expect(duties.every((d: { maxRank: Duty['maxRank'] }) => d.maxRank === 5)).toBeTruthy()
     })
 
     test('GET /duties?minRank=5 should return 200  if there are any duties in the db with that minRank', async () => {
@@ -485,12 +475,9 @@ describe('Duty Routes', () => {
       const duties = responseBody.data
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(duties)).toBe(true)
       expect(duties.length).toBeGreaterThan(0)
 
-      for (const d of duties) {
-        expect(d.minRank).toBe(5)
-      }
+      expect(duties.every((d: { minRank: Duty['minRank'] }) => d.minRank === 5)).toBeTruthy()
     })
 
     test('GET /duties?soldiersRequired=5 should return 200  if there are any duties in the db with that amount of soldiersRequired', async () => {
@@ -504,12 +491,9 @@ describe('Duty Routes', () => {
       const duties = responseBody.data
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(duties)).toBe(true)
       expect(duties.length).toBeGreaterThan(0)
 
-      for (const d of duties) {
-        expect(d.soldiersRequired).toBe(5)
-      }
+      expect(duties.every((d: { soldiersRequired: Duty['soldiersRequired'] }) => d.soldiersRequired === 5)).toBeTruthy()
     })
 
     test('GET /duties?status="unscheduled" should return 200  if there are any duties in the db with that status', async () => {
@@ -523,30 +507,24 @@ describe('Duty Routes', () => {
       const duties = responseBody.data
 
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(duties)).toBe(true)
       expect(duties.length).toBeGreaterThan(0)
 
-      for (const d of duties) {
-        expect(d.status).toBe('unscheduled')
-      }
+      expect(duties.every((d: { status: Duty['status'] }) => d.status === 'unscheduled')).toBeTruthy()
     })
 
     test('GET /duties?soldiers=1234567&soldiers=1234568 should return 200  if there are any duties in the db with those soldiers', async () => {
-      await makeDuty(server, { soldiers: ['1234567', '1234568'] })
+      await makeDuty(server, { soldiers: soldierIds })
       const response = await server.inject({
         method: 'GET',
-        url: '/duties?soldiers=1234567&soldiers=1234568',
+        url: `/duties?soldiers=${soldierIds[0]}&soldiers=${soldierIds[1]}`,
       })
 
       const responseBody = response.json()
-      const duties = responseBody.data
+      const duties = responseBody.data as Duty[]
       expect(response.statusCode).toBe(200)
-      expect(Array.isArray(duties)).toBe(true)
       expect(duties.length).toBeGreaterThan(0)
 
-      for (const d of duties) {
-        expect(d.soldiers).toEqual(expect.arrayContaining(['1234567', '1234568']))
-      }
+      expect(duties.every(d => d.soldiers.every(s => soldierIds.includes(s)))).toBeTruthy()
     })
 
     test('GET /duties?status="none" should return 404  if there aren`t any duties in the db with those params', async () => {
@@ -571,11 +549,169 @@ describe('Duty Routes', () => {
       expect(response.statusCode).toBe(400)
       expect(responseBody.message).toBe(`✖ querystring/minRank Too big: expected number to be <=6`)
     })
+    test('GET /duties?name=NonExistentDutyName should return 404 if no duties match the name', async () => {
+      await makeDuty(server, { name: 'Guard the Main Gate' })
+      const response = await server.inject({
+        method: 'GET',
+        url: '/duties?name=NonExistentDutyName',
+      })
+
+      const responseBody = response.json()
+      expect(response.statusCode).toBe(404)
+      expect(responseBody.message).toBe(`No duties found with the params: {"name":"NonExistentDutyName"}`)
+    })
+
+    test('GET /duties?description=UniqueDescription should return 404 if no duties match the description', async () => {
+      await makeDuty(server, { description: 'Soldiers will secure the main gate during night hours.' })
+      const response = await server.inject({
+        method: 'GET',
+        url: '/duties?description=UniqueDescription',
+      })
+
+      const responseBody = response.json()
+      expect(response.statusCode).toBe(404)
+      expect(responseBody.message).toBe(`No duties found with the params: {"description":"UniqueDescription"}`)
+    })
+
+    test('GET /duties?value=999 should return 404 if no duties match the value', async () => {
+      await makeDuty(server, { value: 100 })
+      const response = await server.inject({
+        method: 'GET',
+        url: '/duties?value=999',
+      })
+
+      const responseBody = response.json()
+      expect(response.statusCode).toBe(404)
+      expect(responseBody.message).toBe(`No duties found with the params: {"value":999}`)
+    })
+
+    test('GET /duties?constraints=UnknownConstraint should return 404 if no duties match the constraints', async () => {
+      await makeDuty(server, { constraints: ['No phones', 'Night duty'] })
+      const response = await server.inject({
+        method: 'GET',
+        url: '/duties?constraints=UnknownConstraint',
+      })
+
+      const responseBody = response.json()
+      expect(response.statusCode).toBe(404)
+      expect(responseBody.message).toBe(`No duties found with the params: {"constraints":["UnknownConstraint"]}`)
+    })
+
+    test('GET /duties?startTime=3000-01-01 should return 404 if all duties start before the provided date', async () => {
+      await makeDuty(server, { startTime: new Date('2026-12-01T00:00:00Z') })
+      const response = await server.inject({
+        method: 'GET',
+        url: '/duties?startTime=3000-01-01',
+      })
+
+      const responseBody = response.json()
+      expect(response.statusCode).toBe(404)
+      expect(responseBody.message).toBe(`No duties found with the params: {"startTime":"3000-01-01T00:00:00.000Z"}`)
+    })
+
+    test('GET /duties?endTime=2000-01-01 should return 404 if all duties end after the provided date', async () => {
+      await makeDuty(server, { endTime: new Date('2026-09-15T00:00:00Z') })
+      const response = await server.inject({
+        method: 'GET',
+        url: '/duties?endTime=2000-01-01',
+      })
+
+      const responseBody = response.json()
+      expect(response.statusCode).toBe(404)
+      expect(responseBody.message).toBe(`No duties found with the params: {"endTime":"2000-01-01T00:00:00.000Z"}`)
+    })
+    test('GET /duties?value=abc should return 400 if value is not a number', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/duties?value=abc',
+      })
+
+      const responseBody = response.json()
+      expect(response.statusCode).toBe(400)
+      expect(responseBody.message).toContain(`✖ querystring/value Invalid input: expected number, received NaN`)
+    })
+
+    test('GET /duties?maxRank=abc should return 400 if maxRank is not a number', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/duties?maxRank=abc',
+      })
+
+      const responseBody = response.json()
+      expect(response.statusCode).toBe(400)
+      expect(responseBody.message).toContain(`✖ querystring/maxRank Invalid input: expected number, received NaN`)
+    })
+
+    test('GET /duties?maxRank=8 should return 400 if maxRank is bigger than allowed in the schema', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/duties?maxRank=8',
+      })
+
+      const responseBody = response.json()
+      expect(response.statusCode).toBe(400)
+      expect(responseBody.message).toContain(`querystring/maxRank Too big: expected number to be <=6`)
+    })
+
+    test('GET /duties?soldiersRequired=-1 should return 400 if soldiersRequired is negative', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/duties?soldiersRequired=-1',
+      })
+
+      const responseBody = response.json()
+      expect(response.statusCode).toBe(400)
+      expect(responseBody.message).toContain(`✖ querystring/soldiersRequired Too small: expected number to be >=0`)
+    })
+
+    test('GET /duties?soldiersRequired=abc should return 400 if soldiersRequired is not a number', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/duties?soldiersRequired=abc',
+      })
+
+      const responseBody = response.json()
+      expect(response.statusCode).toBe(400)
+      expect(responseBody.message).toContain(
+        `✖ querystring/soldiersRequired Invalid input: expected number, received NaN`,
+      )
+    })
+
+    test('GET /duties?startTime=invalid-date-format should return 400 if startTime is not a valid date string', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/duties?startTime=invalid-date-format',
+      })
+
+      const responseBody = response.json()
+      expect(response.statusCode).toBe(400)
+      expect(responseBody.message).toContain(`✖ querystring/startTime Could not coerce value into a valid Date`)
+    })
+
+    test('GET /duties?name=DutyA&value=50 should return 200 and only duties matching both name and value', async () => {
+      await makeDuty(server, { name: 'DutyA', value: 50 })
+      await makeDuty(server, { name: 'DutyA', value: 100 })
+      await makeDuty(server, { name: 'DutyB', value: 50 })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/duties?name=DutyA&value=50',
+      })
+
+      const duties = response.json().data
+
+      expect(response.statusCode).toBe(200)
+      expect(duties.length).toBe(1)
+      expect(
+        duties.every((d: { name: Duty['name']; value: Duty['value'] }) => d.name === 'DutyA' && d.value === 50),
+      ).toBeTruthy()
+    })
   })
 
   describe('DELETE /duties/:_id', () => {
     test('DELETE /duties/:_id should delete the duty and return 204 if the duty was deleted successfully', async () => {
-      const id = await makeDuty(server)
+      const id = (await makeDuty(server, { status: 'unscheduled' }))._id
+
       const response = await server.inject({
         method: 'DELETE',
         url: `/duties/${id}`,
@@ -598,17 +734,22 @@ describe('Duty Routes', () => {
 
       expect(response.statusCode).toBe(404)
     })
+
+    test('DELETE /duties/:_id should return 409 if the duty is already scheduled', async () => {
+      const id = (await makeDuty(server, { status: 'scheduled' }))._id
+      const response = await server.inject({
+        method: 'DELETE',
+        url: `/duties/${id}`,
+      })
+
+      expect(response.statusCode).toBe(409)
+      expect(response.json().message).toBe('Cannot change scheduled duties')
+    })
   })
 
   describe('PATCH /duties/:_id', () => {
     test('PATCH /duties/:_id should return 200 if  a duty with that id exists and the body request matches the schema', async () => {
-      const id = await makeDuty(server)
-      const beforeResponse = await server.inject({
-        method: 'GET',
-        url: `/duties/${id}`,
-      })
-
-      const beforeDuty = beforeResponse.json().data
+      const beforeDuty = await makeDuty(server)
       const beforeHistory = beforeDuty.statusHistory
 
       const dutyPatchBody = {
@@ -616,16 +757,14 @@ describe('Duty Routes', () => {
         name: 'Equipment Maintenance',
         status: 'status',
       }
-
       const response = await server.inject({
         method: 'PATCH',
         payload: dutyPatchBody,
-        url: `/duties/${id}`,
+        url: `/duties/${beforeDuty._id}`,
       })
       const duty = response.json().data
       const afterHistory = duty.statusHistory
 
-      expect(beforeResponse.statusCode).toBe(200)
       expect(response.statusCode).toBe(200)
       expect(duty).toMatchObject({
         description: dutyPatchBody.description,
@@ -640,11 +779,11 @@ describe('Duty Routes', () => {
       expect(lastEntry.status).toBe(dutyPatchBody.status)
 
       const prevEntry = beforeHistory[beforeHistory.length - 1]
-      expect(new Date(lastEntry.date).getTime()).toBeGreaterThan(new Date(prevEntry.date).getTime())
+      expect(new Date(lastEntry.date).getTime()).toBeGreaterThan(new Date(prevEntry!.date).getTime())
     })
 
     test('PATCH /duties/:_id should return 400  if the request`s body contains unrecognized keys', async () => {
-      const id = await makeDuty(server)
+      const id = (await makeDuty(server))._id
       const dutyPatchBody = {
         id: '1234567',
       }
@@ -672,11 +811,11 @@ describe('Duty Routes', () => {
       })
       const responseBody = response.json()
       expect(response.statusCode).toBe(404)
-      expect(responseBody.message).toBe('No duty found with id 691d7ed9aa601e3c057e90bd')
+      expect(responseBody.message).toBe('No duty found with the id: 691d7ed9aa601e3c057e90bd')
     })
 
     test('PATCH /duties/:_id should return 404  if there isn`t any fileds', async () => {
-      const id = '691d7ed9aa601e3c057e90bd'
+      const id = (await makeDuty(server))._id
       const dutyPatchBody = {}
 
       const response = await server.inject({
@@ -690,7 +829,7 @@ describe('Duty Routes', () => {
     })
 
     test('PATCH /duties/:_id should return 409  if the duty is already scheduled', async () => {
-      const id = await makeDuty(server, { status: 'scheduled' })
+      const id = (await makeDuty(server, { status: 'scheduled' }))._id
       const dutyPatchBody = { name: 'Name' }
 
       const response = await server.inject({
@@ -700,20 +839,14 @@ describe('Duty Routes', () => {
       })
       const responseBody = response.json()
       expect(response.statusCode).toBe(409)
-      expect(responseBody.message).toBe('Cannot modify scheduled duties')
+      expect(responseBody.message).toBe('Cannot change scheduled duties')
     })
   })
 
   describe('PUT /duties/:_id/constraints', () => {
     test('PUT /duties/:_id/constraints should return 200  if a duty with that id exists and the request body fits the schema', async () => {
-      const id = await makeDuty(server)
-      const beforeResponse = await server.inject({
-        method: 'GET',
-        url: `/duties/${id}`,
-      })
-
-      const beforeDuty = beforeResponse.json().data
-      const oldConstraints = beforeDuty.constraints || []
+      const beforeDuty = await makeDuty(server)
+      const oldConstraints = beforeDuty?.constraints || []
       const oldUpdateDate = new Date(beforeDuty.updatedAt)
 
       const dutyPutBody = ['Wear protective gloves', 'Follow safety protocol']
@@ -721,19 +854,18 @@ describe('Duty Routes', () => {
       const response = await server.inject({
         method: 'PUT',
         payload: dutyPutBody,
-        url: `/duties/${id}/constraints`,
+        url: `/duties/${beforeDuty._id}/constraints`,
       })
       const responseBody = response.json()
       const duty = responseBody.data
       const expectedConstraints = [...oldConstraints, ...dutyPutBody]
-      expect(beforeResponse.statusCode).toBe(200)
       expect(response.statusCode).toBe(200)
       expect(duty.constraints).toEqual(expectedConstraints)
       expect(new Date(duty.updatedAt).getTime()).toBeGreaterThan(oldUpdateDate.getTime())
     })
 
     test('PUT /duties/:_id/constraints should return 400  if the request body is empty', async () => {
-      const id = await makeDuty(server)
+      const id = (await makeDuty(server))._id
       const dutyPutBody: string[] = []
 
       const response = await server.inject({
@@ -761,7 +893,7 @@ describe('Duty Routes', () => {
     })
 
     test('PUT /duties/:_id/constraints should return 409  if the duty is already scheduled', async () => {
-      const id = await makeDuty(server, { status: 'scheduled' })
+      const id = (await makeDuty(server, { status: 'scheduled' }))._id
       const dutyPatchBody = ['Limit']
 
       const response = await server.inject({

@@ -3,23 +3,24 @@ import { timestampsSchema } from './general.js'
 
 export const ranks = ['private', 'corporal', 'sergeant', 'lieutenant', 'captain', 'major', 'colonel'] as const
 
-export const  soldierIdSchema = z.string().regex(/^\d{7}$/, 'Must be a 7-digit number string.')
+export const soldierIdSchema = z.string().regex(/^\d{7}$/, 'Must be a 7-digit number string.')
 
 export const soldierIdParamSchema = z.object({
   _id: soldierIdSchema,
 })
 
-
 export const soldierLimitationsSchema = z.array(z.string().toLowerCase())
+
+export const valueSchema = z.coerce
+  .number()
+  .min(0)
+  .max(ranks.length - 1)
+  .optional()
 
 export const rankSchema = z
   .object({
     name: z.enum(ranks).optional(),
-    value: z.coerce
-      .number()
-      .min(0)
-      .max(ranks.length - 1)
-      .optional(),
+    value: valueSchema,
   })
   .transform(r => {
     if (r.name && r.value === undefined) return { name: r.name, value: ranks.indexOf(r.name) }
@@ -43,13 +44,10 @@ export const soldierSchema = soldierIdParamSchema.extend(baseSoldierSchema.shape
 export const soldierOutputSchema = soldierSchema.extend(timestampsSchema.shape)
 
 export const soldierQuerySchema = baseSoldierSchema
-  .extend(timestampsSchema.shape)
-  .extend({
+  .safeExtend(timestampsSchema.shape)
+  .safeExtend({
     rankName: z.enum(ranks),
-    rankValue: z.coerce
-      .number()
-      .min(0)
-      .max(ranks.length - 1),
+    rankValue: valueSchema,
   })
   .partial()
   .strict()

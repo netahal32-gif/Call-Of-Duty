@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import buildServer from '../src/server.js'
 import type { Soldier } from '../src/types/soldier.js'
 import { makeSoldier } from './data.js'
-import { soldierPostBody } from './db-insert.js'
+import { soldierPostBody } from './request-bodies.js'
 
 describe('Soldier Routes', () => {
   let server: FastifyInstance
@@ -221,7 +221,7 @@ describe('Soldier Routes', () => {
 
       const responseBody = response.json()
       expect(response.statusCode).toBe(404)
-      expect(responseBody.message).toBe(`No soldier found with id ${id}`)
+      expect(responseBody.message).toBe(`No soldier found with the id: ${id}`)
     })
   })
 
@@ -435,7 +435,7 @@ describe('Soldier Routes', () => {
       })
       const responseBody = response.json()
       expect(response.statusCode).toBe(404)
-      expect(responseBody.message).toBe('No soldier found with id 0000000')
+      expect(responseBody.message).toBe('No soldier found with the id: 0000000')
     })
 
     test('PATCH /soldiers/:_id should return 404  if there isn`t any fileds', async () => {

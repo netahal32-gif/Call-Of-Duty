@@ -39,7 +39,6 @@ const buildServer = async () => {
   return server
 }
 
-
 export type AppServer = FastifyInstance<
   RawServerDefault,
   RawRequestDefaultExpression,
