@@ -1,11 +1,12 @@
 import type { FastifyInstance } from 'fastify'
 import buildServer from '../src/server.js'
+import { createSoldierService } from '../src/services/soldier-service.js'
 import type { Soldier } from '../src/types/soldier.js'
-import { makeSoldier } from './data.js'
-import { soldierPostBody } from './request-bodies.js'
+import { soldierDb, soldierPostBody } from './data.js'
 
 describe('Soldier Routes', () => {
   let server: FastifyInstance
+  let soldierService: ReturnType<typeof createSoldierService>
   const pastDate = '2001-01-01'
 
   beforeAll(async () => {
@@ -13,6 +14,7 @@ describe('Soldier Routes', () => {
     const url = `${baseUrl}-soldier`
     process.env.MONGO_URL = url
     server = await buildServer()
+    soldierService = createSoldierService(server)
   })
 
   afterAll(async () => {
@@ -166,12 +168,12 @@ describe('Soldier Routes', () => {
     })
 
     test('POST /soldiers should return 400  if there is an extra param that isn`t in the schema', async () => {
-      const payload = soldierPostBody()
-      const payloadWithExtraParam = { ...payload, extraParam: 'extra' }
+      const soldierBody = soldierPostBody()
+      const payload = { ...soldierBody, extraParam: 'extra' }
 
       const response = await server.inject({
         method: 'POST',
-        payload: payloadWithExtraParam,
+        payload,
         url: '/soldiers',
       })
 
@@ -181,7 +183,7 @@ describe('Soldier Routes', () => {
     })
 
     test('POST /soldiers should return 500  if there is already a soldier with that id', async () => {
-      const _id = (await makeSoldier(server))._id
+      const _id = (await soldierService.insertSoldier(soldierDb()))._id
       const payload = soldierPostBody({
         _id: _id,
       })
@@ -202,7 +204,7 @@ describe('Soldier Routes', () => {
 
   describe('GET /soldiers/:_id', () => {
     test('GET /soldiers/:_id should return 200  if a soldier with that id is exists in the db', async () => {
-      const id = (await makeSoldier(server))._id
+      const id = (await soldierService.insertSoldier(soldierDb()))._id
       const response = await server.inject({
         method: 'GET',
         url: `/soldiers/${id}`,
@@ -227,7 +229,7 @@ describe('Soldier Routes', () => {
 
   describe('GET /soldiers', () => {
     test('GET /soldiers?rankValue=5 should return 200  if there are any soldiers in the db that are at rankValue 5', async () => {
-      await makeSoldier(server, { rank: { value: 5 } })
+      await soldierService.insertSoldier(soldierDb({ rank: { value: 5 } }))
       const response = await server.inject({
         method: 'GET',
         url: '/soldiers?rankValue=5',
@@ -242,7 +244,7 @@ describe('Soldier Routes', () => {
     })
 
     test('GET /soldiers?name=John%20Doe should return 200  if there are any soldiers in the db that are named John Doe', async () => {
-      await makeSoldier(server, { name: 'John Doe' })
+      await soldierService.insertSoldier(soldierDb({ name: 'John Doe' }))
       const response = await server.inject({
         method: 'GET',
         url: '/soldiers?name=John%20Doe',
@@ -257,7 +259,7 @@ describe('Soldier Routes', () => {
     })
 
     test('GET /soldiers?rankName=major should return 200  if there are any soldiers in the db that are at rank major', async () => {
-      await makeSoldier(server, { rank: { name: 'major' } })
+      await soldierService.insertSoldier(soldierDb({ rank: { name: 'major' } }))
       const response = await server.inject({
         method: 'GET',
         url: '/soldiers?rankName=major',
@@ -271,7 +273,7 @@ describe('Soldier Routes', () => {
     })
 
     test('GET /soldiers?limitations=sunlight&limitations=running should return 200  if there are any soldiers in the db that have sunlight and running as their limitations', async () => {
-      await makeSoldier(server, { limitations: ['sunlight', 'running'] })
+      await soldierService.insertSoldier(soldierDb({ limitations: ['sunlight', 'running'] }))
       const response = await server.inject({
         method: 'GET',
         url: '/soldiers?limitations=sunlight&limitations=running',
@@ -286,8 +288,8 @@ describe('Soldier Routes', () => {
     })
 
     test(`GET /soldiers?createdAt=${pastDate} should return 200 if there are any soldiers in the db that were created after the date`, async () => {
-      await makeSoldier(server)
-      await makeSoldier(server, { _id: '1234567', createdAt: new Date('2000-10-10T00:00:00Z') })
+      await soldierService.insertSoldier(soldierDb())
+      await soldierService.insertSoldier(soldierDb({ _id: '1234567', createdAt: new Date('2000-10-10T00:00:00Z') }))
       const response = await server.inject({
         method: 'GET',
         url: `/soldiers?createdAt=${pastDate}`,
@@ -304,12 +306,15 @@ describe('Soldier Routes', () => {
     })
 
     test(`GET /soldiers?updatedAt=${pastDate} should return 200 if there are any soldiers in the db that were updated after the date`, async () => {
-      await makeSoldier(server)
-      await makeSoldier(server, {
-        _id: '1234567',
-        createdAt: new Date('2000-10-10T00:00:00Z'),
-        updatedAt: new Date('2000-10-10T00:00:00Z'),
-      })
+      await soldierService.insertSoldier(soldierDb())
+      await soldierService.insertSoldier(
+        soldierDb({
+          _id: '1234567',
+          createdAt: new Date('2000-10-10T00:00:00Z'),
+          updatedAt: new Date('2000-10-10T00:00:00Z'),
+        }),
+      )
+
       const response = await server.inject({
         method: 'GET',
         url: `/soldiers?updatedAt=${pastDate}`,
@@ -350,7 +355,7 @@ describe('Soldier Routes', () => {
 
   describe('DELETE /soldiers/:_id', () => {
     test('DELETE /soldiers/:_id should delete the soldier and return 204 if the soldier was deleted successfully', async () => {
-      const id = (await makeSoldier(server))._id
+      const id = (await soldierService.insertSoldier(soldierDb()))._id
       const response = await server.inject({
         method: 'DELETE',
         url: `/soldiers/${id}`,
@@ -377,9 +382,9 @@ describe('Soldier Routes', () => {
 
   describe('PATCH /soldiers/:_id', () => {
     test('PATCH /soldiers/:_id should return 200 if  a soldier with that id exists and the body request matches the schema', async () => {
-      const beforeSoldier = await makeSoldier(server)
+      const beforeSoldier = await soldierService.insertSoldier(soldierDb())
 
-      const soldierPatchBody = {
+      const payload = {
         name: 'Peggy Carter',
         rank: {
           value: 0,
@@ -388,7 +393,7 @@ describe('Soldier Routes', () => {
 
       const response = await server.inject({
         method: 'PATCH',
-        payload: soldierPatchBody,
+        payload,
         url: `/soldiers/${beforeSoldier._id}`,
       })
       const soldier = response.json().data
@@ -396,10 +401,10 @@ describe('Soldier Routes', () => {
       expect(response.statusCode).toBe(200)
       expect(soldier).toMatchObject({
         _id: beforeSoldier._id,
-        name: soldierPatchBody.name,
+        name: payload.name,
         rank: {
           name: 'private',
-          value: soldierPatchBody.rank.value,
+          value: payload.rank.value,
         },
       })
       expect(new Date(soldier.createdAt).toISOString()).toBe(new Date(beforeSoldier.createdAt).toISOString())
@@ -407,14 +412,14 @@ describe('Soldier Routes', () => {
     })
 
     test('PATCH /soldiers/:_id should return 400  if the request`s body contains unrecognized keys', async () => {
-      const id = (await makeSoldier(server))._id
-      const soldierPatchBody = {
+      const id = (await soldierService.insertSoldier(soldierDb()))._id
+      const payload = {
         id: '1234567',
       }
 
       const response = await server.inject({
         method: 'PATCH',
-        payload: soldierPatchBody,
+        payload,
         url: `/soldiers/${id}`,
       })
       const responseBody = response.json()
@@ -424,13 +429,13 @@ describe('Soldier Routes', () => {
 
     test('PATCH /soldiers/:_id should return 404  if there isn`t a soldier with that id', async () => {
       const id = '0000000'
-      const soldierPatchBody = {
+      const payload = {
         name: 'Name',
       }
 
       const response = await server.inject({
         method: 'PATCH',
-        payload: soldierPatchBody,
+        payload,
         url: `/soldiers/${id}`,
       })
       const responseBody = response.json()
@@ -440,11 +445,11 @@ describe('Soldier Routes', () => {
 
     test('PATCH /soldiers/:_id should return 404  if there isn`t any fileds', async () => {
       const id = '0000000'
-      const soldierPatchBody = {}
+      const payload = {}
 
       const response = await server.inject({
         method: 'PATCH',
-        payload: soldierPatchBody,
+        payload,
         url: `/soldiers/${id}`,
       })
       const responseBody = response.json()
@@ -455,21 +460,21 @@ describe('Soldier Routes', () => {
 
   describe('PUT /soldiers/:_id/limitations', () => {
     test('PUT /soldiers/:_id/limitations should return 200  if a soldier with that id exists and the request body fits the schema', async () => {
-      const beforeSoldier = await makeSoldier(server)
+      const beforeSoldier = await soldierService.insertSoldier(soldierDb())
 
       const oldLimitations = beforeSoldier.limitations || []
       const oldUpdateDate = new Date(beforeSoldier.updatedAt)
 
-      const soldierPutBody = ['STANDING', 'sUn']
+      const payload = ['STANDING', 'sUn']
 
       const response = await server.inject({
         method: 'PUT',
-        payload: soldierPutBody,
+        payload,
         url: `/soldiers/${beforeSoldier._id}/limitations`,
       })
       const responseBody = response.json()
       const soldier = responseBody.data
-      const expectedLimitations = [...oldLimitations, ...soldierPutBody.map(l => l.toLowerCase())]
+      const expectedLimitations = [...oldLimitations, ...payload.map(l => l.toLowerCase())]
 
       expect(response.statusCode).toBe(200)
       expect(soldier.limitations).toEqual(expectedLimitations)
@@ -477,12 +482,12 @@ describe('Soldier Routes', () => {
     })
 
     test('PUT /soldiers/:_id/limitations should return 400  if the request body is empty', async () => {
-      const id = (await makeSoldier(server))._id
-      const soldierPutBody: string[] = []
+      const id = (await soldierService.insertSoldier(soldierDb()))._id
+      const payload: string[] = []
 
       const response = await server.inject({
         method: 'PUT',
-        payload: soldierPutBody,
+        payload,
         url: `/soldiers/${id}/limitations`,
       })
       const responseBody = response.json()
@@ -492,11 +497,11 @@ describe('Soldier Routes', () => {
 
     test('PUT /soldiers/:_id/limitations should return 404  if there is no soldier with that id', async () => {
       const id = '0000000'
-      const soldierPutBody = ['Limit']
+      const payload = ['Limit']
 
       const response = await server.inject({
         method: 'PUT',
-        payload: soldierPutBody,
+        payload,
         url: `/soldiers/${id}/limitations`,
       })
       const responseBody = response.json()
