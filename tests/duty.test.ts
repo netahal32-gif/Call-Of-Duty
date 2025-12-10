@@ -756,13 +756,7 @@ describe('Duty Routes', () => {
 
   describe('PATCH /duties/:_id', () => {
     test('PATCH /duties/:_id should return 200 if  a duty with that id exists and the body request matches the schema', async () => {
-      const id = await makeDuty(server)
-      const beforeResponse = await server.inject({
-        method: 'GET',
-        url: `/duties/${id}`,
-      })
-
-      const beforeDuty  = beforeResponse.json().data
+      const beforeDuty = await dutyService.insertDuty(dutyDb())
       const beforeHistory = beforeDuty.statusHistory
 
       const payload = {
