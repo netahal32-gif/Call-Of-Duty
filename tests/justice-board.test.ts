@@ -18,6 +18,7 @@ describe('Justice Routes', () => {
     server = await buildServer()
     dutyService = createDutyService(server)
     soldierService = createSoldierService(server)
+    
   })
 
   afterAll(async () => {

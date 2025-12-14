@@ -52,7 +52,7 @@ export const extrasDutySchema = z.object({
 
 export const dutySchema = baseDutySchema.safeExtend(extrasDutySchema.shape)
 
-export const dutyOutputSchema = dutySchema.safeExtend(timestampsSchema.shape).strict()
+export const dutyDbSchema = dutySchema.safeExtend(timestampsSchema.shape).strict()
 
 export const dutyQuerySchema = baseDutySchema
   .safeExtend(timestampsSchema.shape)
@@ -79,12 +79,12 @@ export const constraintsSchema = z.array(z.string()).refine(data => Object.keys(
 })
 
 export const dutyResponseSchema = z.object({
-  data: dutyOutputSchema,
+  data: dutyDbSchema,
   message: z.string(),
 })
 
 export const dutiesArrayResponseSchema = z.object({
-  data: z.array(dutyOutputSchema),
+  data: z.array(dutyDbSchema),
   message: z.string(),
 })
 
@@ -92,7 +92,7 @@ export type BaseDuty = z.infer<typeof baseDutySchema>
 
 export type Duty = z.infer<typeof dutySchema>
 
-export type DutyDB = z.infer<typeof dutyOutputSchema>
+export type DutyDB = z.infer<typeof dutyDbSchema>
 
 export type DutyQuery = z.infer<typeof dutyQuerySchema>
 
