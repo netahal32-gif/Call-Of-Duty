@@ -38,9 +38,9 @@ describe('Justice Routes', () => {
       const soldier2Id = (await insertSoldier({ _id: '1234568' }))._id
       const soldier3Id = (await insertSoldier({ _id: '1234569' }))._id
       const soldier4Id = (await insertSoldier({ _id: '1234560' }))._id
-      await insertDuty({ soldiers: [soldier1Id, soldier2Id, soldier3Id] })
-      await insertDuty({ soldiers: [soldier1Id, soldier2Id] })
-      await insertDuty({ soldiers: [soldier1Id] })
+      const duty1Value = (await insertDuty({ soldiers: [soldier1Id, soldier2Id, soldier3Id], value: 200 })).value
+      const duty2Value = (await insertDuty({ soldiers: [soldier1Id, soldier2Id], value: 200 })).value
+      const duty3Value = (await insertDuty({ soldiers: [soldier1Id], value: 200 })).value
       const response = await server.inject({
         method: 'GET',
         url: `/justice-board`,
@@ -53,9 +53,9 @@ describe('Justice Routes', () => {
 
       expect(response.statusCode).toBe(200)
       expect(justiceBoard.length).toBe(4)
-      expect(soldier1.score).toBe(3)
-      expect(soldier2.score).toBe(2)
-      expect(soldier3.score).toBe(1)
+      expect(soldier1.score).toBe(duty1Value + duty2Value + duty3Value)
+      expect(soldier2.score).toBe(duty2Value + duty3Value)
+      expect(soldier3.score).toBe(duty3Value)
       expect(soldier4.score).toBe(0)
     })
 
@@ -72,15 +72,15 @@ describe('Justice Routes', () => {
 
   describe('GET /justice-board/:_id', () => {
     test('GET /justice-board should return 200 if there a soldier with that id', async () => {
-      const soldier1Id = (await insertSoldier())._id
-      await insertDuty({ soldiers: [soldier1Id] })
+      const soldier1Id = (await insertSoldier({ _id: '9234567' }))._id
+      const dutyValue = (await insertDuty({ soldiers: [soldier1Id], value: 200 })).value
       const response = await server.inject({
         method: 'GET',
         url: `/justice-board/${soldier1Id}`,
       })
       const justiceBoard = response.json().data
       expect(response.statusCode).toBe(200)
-      expect(justiceBoard.score).toBe(1)
+      expect(justiceBoard.score).toBe(dutyValue)
     })
 
     test('GET /justice-board should return 404 if there isn`t a soldier with that id', async () => {
