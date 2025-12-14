@@ -1,4 +1,3 @@
-
 import type { BaseDuty, DutyDB } from '../src/types/duty.js'
 import type { Soldier, SoldierDb, SoldierRank } from '../src/types/soldier.js'
 import { ranks } from '../src/types/soldier.js'

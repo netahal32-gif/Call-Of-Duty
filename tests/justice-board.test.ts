@@ -2,23 +2,23 @@ import type { FastifyInstance } from 'fastify'
 import buildServer from '../src/server.js'
 import { createDutyService } from '../src/services/duty-service.js'
 import { createSoldierService } from '../src/services/soldier-service.js'
-import { dutyDb, soldierDb } from './data.js'
+import type { DutyDB, DutyDBWithId } from '../src/types/duty.js'
 import type { SoldierDb } from '../src/types/soldier.js'
+import { dutyDbBody, soldierDbBody } from './data.js'
 
 describe('Justice Routes', () => {
   let server: FastifyInstance
-  let dutyService: ReturnType<typeof createDutyService>
-  let soldierService: ReturnType<typeof createSoldierService>
-   let insertSoldier: (params?: Partial<SoldierDb>) => Promise<SoldierDb>
+  let insertSoldier: (params?: Partial<SoldierDb>) => Promise<SoldierDb>
+  let insertDuty: (params?: Partial<DutyDB>) => Promise<DutyDBWithId>
 
   beforeAll(async () => {
     const baseUrl = process.env.MONGO_URL!
     const url = `${baseUrl}-justice`
     process.env.MONGO_URL = url
     server = await buildServer()
-    dutyService = createDutyService(server)
-    soldierService = createSoldierService(server)
-    
+    insertSoldier = async (params?: Partial<SoldierDb>) =>
+      await createSoldierService(server).insertSoldier(soldierDbBody(params))
+    insertDuty = async (params?: Partial<DutyDB>) => await createDutyService(server).insertDuty(dutyDbBody(params))
   })
 
   afterAll(async () => {
@@ -34,13 +34,13 @@ describe('Justice Routes', () => {
 
   describe('GET /justice-board', () => {
     test('GET /justice-board should return 200 if there are any soldiers in the db', async () => {
-      const soldier1Id = (await soldierService.insertSoldier(soldierDb({ _id: '1234567' })))._id
-      const soldier2Id = (await soldierService.insertSoldier(soldierDb({ _id: '1234568' })))._id
-      const soldier3Id = (await soldierService.insertSoldier(soldierDb({ _id: '1234569' })))._id
-      const soldier4Id = (await soldierService.insertSoldier(soldierDb({ _id: '1234560' })))._id
-      await dutyService.insertDuty(dutyDb({ soldiers: [soldier1Id, soldier2Id, soldier3Id] }))
-      await dutyService.insertDuty(dutyDb({ soldiers: [soldier1Id, soldier2Id] }))
-      await dutyService.insertDuty(dutyDb({ soldiers: [soldier1Id] }))
+      const soldier1Id = (await insertSoldier({ _id: '1234567' }))._id
+      const soldier2Id = (await insertSoldier({ _id: '1234568' }))._id
+      const soldier3Id = (await insertSoldier({ _id: '1234569' }))._id
+      const soldier4Id = (await insertSoldier({ _id: '1234560' }))._id
+      await insertDuty({ soldiers: [soldier1Id, soldier2Id, soldier3Id] })
+      await insertDuty({ soldiers: [soldier1Id, soldier2Id] })
+      await insertDuty({ soldiers: [soldier1Id] })
       const response = await server.inject({
         method: 'GET',
         url: `/justice-board`,
@@ -72,8 +72,8 @@ describe('Justice Routes', () => {
 
   describe('GET /justice-board/:_id', () => {
     test('GET /justice-board should return 200 if there a soldier with that id', async () => {
-      const soldier1Id = (await soldierService.insertSoldier(soldierDb()))._id
-      await dutyService.insertDuty(dutyDb({ soldiers: [soldier1Id] }))
+      const soldier1Id = (await insertSoldier())._id
+      await insertDuty({ soldiers: [soldier1Id] })
       const response = await server.inject({
         method: 'GET',
         url: `/justice-board/${soldier1Id}`,

@@ -13,11 +13,11 @@ export const createJusticeService = (server: AppServer) => {
       .aggregate([
         {
           $lookup: {
-            from: "duties",
-            localField: "_id",
-            foreignField: "soldiers",
-            as: "dutiesCount"
-          }
+            as: 'dutiesCount',
+            foreignField: 'soldiers',
+            from: 'duties',
+            localField: '_id',
+          },
         },
         {
           $project: {

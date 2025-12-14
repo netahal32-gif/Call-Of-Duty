@@ -9,6 +9,7 @@ import type {
 import Fastify from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
+import dutyRoutes from './routes/duty.js'
 import healthRoutes from './routes/health.js'
 import justiceRoutes from './routes/justice-board.js'
 import soldierRoutes from './routes/soldier.js'
