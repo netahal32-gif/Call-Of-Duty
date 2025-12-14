@@ -29,7 +29,7 @@ export const createJusticeService = (server: AppServer) => {
       ])
       .toArray()
     if (!result.length) throw new CustomError(404, `No soldiers found in the db`)
-    return result as { _id: string; score: number }[]
+    return result 
   }
 
   const getScoreById = async (_id: SoldierId) => {

@@ -819,7 +819,7 @@ describe('Duty Routes', () => {
       expect(responseBody.message).toBe('No duty found with the id: 691d7ed9aa601e3c057e90bd')
     })
 
-    test('PATCH /duties/:_id should return 404  if there isn`t any fileds', async () => {
+    test('PATCH /duties/:_id should return 400  if there isn`t any fileds', async () => {
       const id = (await insertDuty())._id
       const payload = {}
 
