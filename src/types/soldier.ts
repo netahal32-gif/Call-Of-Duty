@@ -41,7 +41,7 @@ export const baseSoldierSchema = z.object({
 
 export const soldierSchema = soldierIdParamSchema.extend(baseSoldierSchema.shape).extend({ rank: rankSchema }).strict()
 
-export const soldierOutputSchema = soldierSchema.extend(timestampsSchema.shape)
+export const soldierDbSchema = soldierSchema.extend(timestampsSchema.shape)
 
 export const soldierQuerySchema = baseSoldierSchema
   .safeExtend(timestampsSchema.shape)
@@ -65,18 +65,18 @@ export const soldierAddLimitationsSchema = soldierLimitationsSchema.refine(data 
 })
 
 export const soldierResponseSchema = z.object({
-  data: soldierOutputSchema,
+  data: soldierDbSchema,
   message: z.string(),
 })
 
 export const soldiersArrayResponseSchema = z.object({
-  data: z.array(soldierOutputSchema),
+  data: z.array(soldierDbSchema),
   message: z.string(),
 })
 
 export type SoldierBodyToUpdate = z.infer<typeof SoldierBodyToUpdateSchema>
 
-export type SoldierDb = z.infer<typeof soldierOutputSchema>
+export type SoldierDb = z.infer<typeof soldierDbSchema>
 
 export type Soldier = z.infer<typeof soldierSchema>
 
