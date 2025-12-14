@@ -1,17 +1,19 @@
 import { z } from 'zod'
 import { soldierIdSchema } from './soldier.js'
 
-export const justiceOutputSchema = z.object({
+export const justiceBoardDbSchema = z.object({
   _id: soldierIdSchema,
   score: z.number(),
 })
 
-export const justiceResponseSchema = z.object({
-  data: justiceOutputSchema,
+export const justiceBoardResponseSchema = z.object({
+  data: justiceBoardDbSchema,
   message: z.string(),
 })
 
-export const justiceArrayResponseSchema = z.object({
-  data: z.array(justiceOutputSchema),
+export const justiceBoardArrayResponseSchema = z.object({
+  data: z.array(justiceBoardDbSchema),
   message: z.string(),
 })
+
+export type JusticeBoardDb = z.infer<typeof justiceBoardDbSchema>
