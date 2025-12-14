@@ -1,7 +1,7 @@
-const isTest = process.env.TEST
+const isTest = process.env.NODE_ENV === 'test'
 
 export const loggerConfig = {
-  level: isTest === 'true' ? 'silent' : 'info',
+  level: isTest === true ? 'silent' : 'info',
   transport: {
     options: {
       colorize: true,

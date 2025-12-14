@@ -1,19 +1,23 @@
-import { defineConfig } from 'vitest/config'
 import { loadEnv } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv('test', process.cwd(), '')
+  const env = loadEnv(mode, process.cwd(), '')
 
   return {
     test: {
-      environment: 'node',
-      globals: true,
       coverage: {
+        enabled: true,
+        exclude: ['node_modules/**', 'dist/**', '**/build/**', 'tests/data.ts'],
         provider: 'v8',
       },
       env,
+      environment: 'node',
+      exclude: ['node_modules/**', 'dist/**', '**/build/**', 'tests/data.ts'],
+      globals: true,
       include: ['**/tests/*.test.ts'],
-      exclude: [],
+      isolate: true,
+      threads: false,
     },
   }
 })

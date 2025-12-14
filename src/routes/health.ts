@@ -1,14 +1,15 @@
-import type { FastifyInstance } from 'fastify'
+import type { AppServer } from '../server.js'
 
-const healthRoutes = async (server: FastifyInstance) => {
+const healthRoutes = async (server: AppServer) => {
   server.get('/', async (_, res) => {
     return res.status(200).send({ status: 'ok' })
   })
 
   server.get('/db', async (_, res) => {
-    if (server.mongo?.db) {
+    try {
+      await server.mongo.client.db().command({ ping: 1 })
       return res.status(200).send({ status: 'ok' })
-    } else {
+    } catch {
       return res.status(503).send({ status: 'No mongoDB connection' })
     }
   })

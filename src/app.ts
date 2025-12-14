@@ -1,14 +1,20 @@
+import type { AppServer } from './server.js'
 import buildServer from './server.js'
 
 const PORT = Number(process.env.PORT)
+let server: AppServer
 
 const start = async () => {
-  const server = await buildServer()
   try {
+    server = await buildServer()
     await server.listen({ port: PORT })
   } catch (err) {
-    server.log.error({ 'Error Listening to Server': err })
-    process.exit(1)
+    if (server) {
+      server.log.fatal(err, 'Error Listening to Server')
+    } else {
+      console.error('Error starting server (server not initialized):', err)
+    }
+    process.exitCode = 1
   }
 }
 
