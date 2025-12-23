@@ -75,6 +75,7 @@ describe('Justice Routes', () => {
       const soldier1Id = (await insertSoldier({ _id: '9234567' }))._id
       const duty1Value = (await insertDuty({ soldiers: [soldier1Id], value: 200 })).value
       const duty2Value = (await insertDuty({ soldiers: [soldier1Id], value: 300 })).value
+      await insertDuty({ value: 200 })
       const response = await server.inject({
         method: 'GET',
         url: `/justice-board/${soldier1Id}`,
