@@ -24,6 +24,10 @@ export const createSoldierService = (server: AppServer) => {
     return soldier
   }
 
+  const insertManySoldiers = async (body: SoldierDb[]) => {
+    await collection.insertMany(body)
+  }
+
   const getSoldierByParams = async (query: SoldierQuery) => {
     const mongoQuery: Filter<Soldier> = {}
 
@@ -73,6 +77,7 @@ export const createSoldierService = (server: AppServer) => {
     deleteSoldier,
     getSoldierById,
     getSoldierByParams,
+    insertManySoldiers,
     insertSoldier,
     updateSoldier,
   }

@@ -6,13 +6,13 @@ const justiceRoutes = async (server: AppServer) => {
   const justiceService = createJusticeService(server)
 
   server.get('/', getAllScoresSchema, async (_, res) => {
-    const justiceBoard = await justiceService.getBoard()
-    return res.status(200).send({ data: justiceBoard, message: 'Justice board retrieved successfully' })
+    const justiceScoreArray = await justiceService.getBoard()
+    return res.status(200).send({ data: justiceScoreArray, message: 'Justice board retrieved successfully' })
   })
 
   server.get('/:_id', getByIdSchema, async (req, res) => {
-    const justiceBoard = await justiceService.getScoreById(req.params._id)
-    return res.status(200).send({ data: justiceBoard, message: 'Soldier`s score retrieved successfully' })
+    const justiceScoreArray = await justiceService.getScoreById(req.params._id)
+    return res.status(200).send({ data: justiceScoreArray, message: 'Soldier`s score retrieved successfully' })
   })
 }
 

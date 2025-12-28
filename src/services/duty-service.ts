@@ -33,6 +33,10 @@ export const createDutyService = (server: AppServer) => {
     return { ...duty, _id: result.insertedId }
   }
 
+  const insertManyDuties = async (body: DutyDB[]) => {
+    await collection.insertMany(body)
+  }
+
   const getDutiesByParams = async (query: DutyQuery) => {
     const mongoQuery: Filter<DutyDB> = { ...query }
 
@@ -105,6 +109,7 @@ export const createDutyService = (server: AppServer) => {
     getDutiesByParams,
     getDuty,
     insertDuty,
+    insertManyDuties,
     updateDuty,
   }
 }

@@ -10,10 +10,10 @@ export const createJusticeService = (server: AppServer) => {
   const dutiesValueCalculator = [
     {
       $lookup: {
-        as: 'assignedDuties',
-        foreignField: 'soldiers',
         from: 'duties',
         localField: '_id',
+        foreignField: 'soldiers',
+        as: 'assignedDuties',
       },
     },
     {
